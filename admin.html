@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="robots" content="noindex, nofollow">
+<title>Dashboard — Dr. ARK Fitness</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --navy:#0D1B3E; --paper:#F6F5F2; --white:#fff; --gold:#C9A84C;
+  --slate:#5A6478; --line:rgba(13,27,62,.13); --green:#2E7D5B; --red:#B3261E;
+  --body:'Outfit',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--body);background:var(--paper);color:var(--navy);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--white);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:6px;padding:32px 26px;width:100%;max-width:380px}
+.login-card h1{font-size:22px;margin-bottom:6px}
+.login-card p{color:var(--slate);font-size:15px;margin-bottom:22px}
+
+/* header */
+header{background:var(--navy);color:#fff;padding:14px 0;position:sticky;top:0;z-index:50}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.hd b{font-size:17px;font-weight:600}
+.hd button{background:rgba(255,255,255,.14);color:#fff;border:0;padding:8px 14px;border-radius:5px;font-family:var(--body);font-size:14px;cursor:pointer}
+
+/* tabs */
+nav.tabs{background:var(--white);border-bottom:1px solid var(--line);position:sticky;top:56px;z-index:40;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabs-inner{display:flex;gap:4px;min-width:max-content}
+.tab{background:none;border:0;padding:14px 16px;font-family:var(--body);font-size:15px;color:var(--slate);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--navy);font-weight:600;border-bottom-color:var(--gold)}
+
+main{padding:22px 0 80px}
+.panel{display:none}
+.panel.on{display:block}
+
+h2{font-size:20px;margin-bottom:4px}
+.sub{color:var(--slate);font-size:14.5px;margin-bottom:20px}
+
+.card{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:20px 18px;margin-bottom:14px}
+.card h3{font-size:16.5px;margin-bottom:14px}
+
+label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate);margin:0 0 6px}
+input,select,textarea{width:100%;padding:12px;font-family:var(--body);font-size:16px;border:1px solid var(--line);border-radius:5px;background:var(--white);color:var(--navy);margin-bottom:14px}
+textarea{min-height:88px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:0}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+
+.btn{background:var(--navy);color:#fff;border:0;padding:13px 20px;border-radius:5px;font-family:var(--body);font-size:15.5px;font-weight:500;cursor:pointer}
+.btn:hover{background:#0a1531}
+.btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--line)}
+.btn.danger{background:transparent;color:var(--red);border:1px solid var(--red);padding:9px 14px;font-size:14px}
+.btn.sm{padding:9px 14px;font-size:14px}
+.btn:disabled{opacity:.5;cursor:default}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:16px}
+.stat .n{font-family:var(--mono);font-size:28px;font-weight:500;line-height:1.1}
+.stat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);margin-top:5px}
+
+.lead{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:10px}
+.lead-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:8px}
+.lead-name{font-weight:600;font-size:17px}
+.lead-when{font-family:var(--mono);font-size:11.5px;color:var(--slate);white-space:nowrap}
+.lead-meta{font-size:14.5px;color:var(--slate);line-height:1.7}
+.lead-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.lead-actions select{width:auto;margin:0;padding:8px 10px;font-size:14px}
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:3px;background:rgba(13,27,62,.08);color:var(--slate)}
+.pill.new{background:rgba(201,168,76,.2);color:#7A6417}
+.pill.joined{background:rgba(46,125,91,.16);color:var(--green)}
+
+.thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3}
+.msg{padding:11px 14px;border-radius:5px;font-size:14.5px;margin-bottom:14px;display:none}
+.msg.ok{background:rgba(46,125,91,.12);color:var(--green);display:block}
+.msg.err{background:rgba(179,38,30,.1);color:var(--red);display:block}
+.empty{color:var(--slate);font-size:15px;padding:26px;text-align:center;background:var(--white);border:1px dashed var(--line);border-radius:6px}
+.bar{height:7px;background:rgba(13,27,62,.09);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--gold)}
+
+@media(min-width:700px){
+  .stats{grid-template-columns:repeat(4,1fr)}
+  .wrap{padding:0 24px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="login">
+  <div class="login-card">
+    <h1>Dr. ARK Dashboard</h1>
+    <p>Sign in to manage your website and see your leads.</p>
+    <div class="msg" id="loginMsg"></div>
+    <label for="em">Email</label>
+    <input type="email" id="em" autocomplete="username">
+    <label for="pw">Password</label>
+    <input type="password" id="pw" autocomplete="current-password">
+    <button class="btn" id="loginBtn" style="width:100%">Sign in</button>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="app" style="display:none">
+
+<header>
+  <div class="wrap hd">
+    <b>Dr. ARK Dashboard</b>
+    <button id="out">Sign out</button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap tabs-inner">
+    <button class="tab on" data-p="overview">Overview</button>
+    <button class="tab" data-p="leads">Leads</button>
+    <button class="tab" data-p="results">Client Results</button>
+    <button class="tab" data-p="faqs">Questions</button>
+    <button class="tab" data-p="settings">Website</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- OVERVIEW -->
+  <section class="panel on" id="p-overview">
+    <h2>Overview</h2>
+    <p class="sub">Last 30 days</p>
+    <div class="stats" id="stats"></div>
+
+    <div class="card">
+      <h3>How the form is performing</h3>
+      <div id="funnel"></div>
+    </div>
+
+    <div class="card">
+      <h3>Where people come from</h3>
+      <div id="sources"></div>
+    </div>
+
+    <div class="card">
+      <h3>Most common goal</h3>
+      <div id="goals"></div>
+    </div>
+  </section>
+
+  <!-- LEADS -->
+  <section class="panel" id="p-leads">
+    <h2>Leads</h2>
+    <p class="sub">Everyone who filled in the form, even if they never messaged you.</p>
+    <select id="leadFilter" style="max-width:260px">
+      <option value="">All</option>
+      <option value="new">New</option>
+      <option value="contacted">Contacted</option>
+      <option value="booked">Call booked</option>
+      <option value="joined">Joined</option>
+      <option value="not_now">Not now</option>
+    </select>
+    <div id="leadList"></div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="panel" id="p-results">
+    <h2>Client Results</h2>
+    <p class="sub">Only ones marked "Show on website" appear publicly.</p>
+    <div class="msg" id="resMsg"></div>
+    <button class="btn" id="addRes" style="margin-bottom:16px">+ Add a client</button>
+    <div id="resList"></div>
+  </section>
+
+  <!-- FAQS -->
+  <section class="panel" id="p-faqs">
+    <h2>Questions</h2>
+    <p class="sub">These show in the Questions section of your website.</p>
+    <div class="msg" id="faqMsg"></div>
+    <button class="btn" id="addFaq" style="margin-bottom:16px">+ Add a question</button>
+    <div id="faqList"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="panel" id="p-settings">
+    <h2>Website</h2>
+    <p class="sub">Price, contact details and your photos.</p>
+    <div class="msg" id="setMsg"></div>
+
+    <div class="card">
+      <h3>Price</h3>
+      <label>Price shown on the website</label>
+      <input id="s-price">
+      <label>Text under the price</label>
+      <input id="s-price_note">
+      <label>Places left</label>
+      <input id="s-places_left">
+    </div>
+
+    <div class="card">
+      <h3>Contact</h3>
+      <label>WhatsApp number (no + or spaces)</label>
+      <input id="s-whatsapp_number">
+      <label>WhatsApp shown on site</label>
+      <input id="s-whatsapp_display">
+      <label>Email</label>
+      <input id="s-email">
+      <div class="row2">
+        <div><label>Instagram</label><input id="s-instagram"></div>
+        <div><label>TikTok</label><input id="s-tiktok"></div>
+      </div>
+      <label>City</label>
+      <input id="s-city">
+    </div>
+
+    <div class="card">
+      <h3>Your photos</h3>
+      <label>Main photo (top of the page)</label>
+      <img class="thumb" id="th-hero" style="aspect-ratio:4/5">
+      <input type="file" accept="image/*" id="up-hero">
+      <label style="margin-top:14px">About photo</label>
+      <img class="thumb" id="th-about" style="aspect-ratio:4/5">
+      <input type="file" accept="image/*" id="up-about">
+      <label style="margin-top:14px">Welcome video link (YouTube)</label>
+      <input id="s-video_url" placeholder="https://www.youtube.com/embed/...">
+    </div>
+
+    <button class="btn" id="saveSet" style="width:100%">Save changes</button>
+  </section>
+
+</main>
+</div>
+
+<script>
+/* ============================================================
+   PUT YOUR SUPABASE DETAILS HERE
+   Supabase → Project Settings → API
+   ============================================================ */
+const SUPABASE_URL = 'https://sexvpekhjeweykcibhmr.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNleHZwZWtoamV3ZXlrY2liaG1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MDc0MDAsImV4cCI6MjEwMTE4MzQwMH0.fmFicgxqW9PgPBrhnEXm_rGlkY-UMv53bqLObqr6uKA';
+/* ============================================================ */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = id => document.getElementById(id);
+const esc = s => (s||'').toString().replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const flash = (el, text, ok=true) => {
+  el.textContent = text; el.className = 'msg ' + (ok?'ok':'err');
+  setTimeout(()=>{ el.className='msg'; }, 3500);
+};
+
+/* ---------- auth ---------- */
+async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session){ $('login').style.display='none'; $('app').style.display='block'; loadAll(); }
+  else { $('login').style.display='flex'; $('app').style.display='none'; }
+}
+
+$('loginBtn').onclick = async () => {
+  const btn=$('loginBtn'); btn.disabled=true; btn.textContent='Signing in...';
+  const { error } = await sb.auth.signInWithPassword({ email:$('em').value.trim(), password:$('pw').value });
+  btn.disabled=false; btn.textContent='Sign in';
+  if(error) flash($('loginMsg'), error.message, false); else boot();
+};
+$('pw').addEventListener('keydown', e => { if(e.key==='Enter') $('loginBtn').click(); });
+$('out').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+/* ---------- tabs ---------- */
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');
+  $('p-'+t.dataset.p).classList.add('on');
+  window.scrollTo(0,0);
+});
+
+function loadAll(){ loadStats(); loadLeads(); loadResults(); loadFaqs(); loadSettings(); }
+
+/* ---------- overview ---------- */
+async function loadStats(){
+  const since = new Date(Date.now()-30*864e5).toISOString();
+
+  const { count: leads30 }  = await sb.from('leads').select('*',{count:'exact',head:true}).gte('created_at', since);
+  const { count: leadsAll } = await sb.from('leads').select('*',{count:'exact',head:true});
+  const { count: joined }   = await sb.from('leads').select('*',{count:'exact',head:true}).eq('status','joined');
+  const { data: views }     = await sb.from('page_views').select('event, referrer').gte('created_at', since);
+
+  const v = (views||[]);
+  const nViews  = v.filter(x=>x.event==='view').length;
+  const nStart  = v.filter(x=>x.event==='form_start').length;
+  const nSubmit = v.filter(x=>x.event==='form_submit').length;
+
+  $('stats').innerHTML = [
+    ['Visits (30d)', nViews],
+    ['Leads (30d)',  leads30||0],
+    ['Leads total',  leadsAll||0],
+    ['Clients joined', joined||0]
+  ].map(([l,n]) => `<div class="stat"><div class="n">${n}</div><div class="l">${l}</div></div>`).join('');
+
+  const pct = (a,b) => b ? Math.round(a/b*100) : 0;
+  $('funnel').innerHTML = [
+    ['Visited the site', nViews, 100],
+    ['Started the form', nStart, pct(nStart,nViews)],
+    ['Finished the form', nSubmit, pct(nSubmit,nViews)],
+    ['Became a client', joined||0, pct(joined||0, nViews)]
+  ].map(([l,n,p]) =>
+    `<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-size:14.5px">
+      <span>${l}</span><span style="font-family:var(--mono)">${n} · ${p}%</span></div>
+      <div class="bar"><i style="width:${Math.min(p,100)}%"></i></div></div>`).join('')
+    || '<p class="sub">No data yet.</p>';
+
+  /* sources */
+  const src = {};
+  v.filter(x=>x.event==='view').forEach(x=>{
+    let r = 'Direct';
+    if(x.referrer){
+      if(/instagram/i.test(x.referrer)) r='Instagram';
+      else if(/tiktok/i.test(x.referrer)) r='TikTok';
+      else if(/google/i.test(x.referrer)) r='Google';
+      else if(/youtube/i.test(x.referrer)) r='YouTube';
+      else if(/facebook/i.test(x.referrer)) r='Facebook';
+      else r='Other';
+    }
+    src[r]=(src[r]||0)+1;
+  });
+  const total = Object.values(src).reduce((a,b)=>a+b,0);
+  $('sources').innerHTML = total ? Object.entries(src).sort((a,b)=>b[1]-a[1]).map(([k,n])=>
+    `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:14.5px">
+      <span>${k}</span><span style="font-family:var(--mono)">${n} · ${Math.round(n/total*100)}%</span></div>
+      <div class="bar"><i style="width:${n/total*100}%"></i></div></div>`).join('')
+    : '<p class="sub">No data yet.</p>';
+
+  /* goals */
+  const { data: gl } = await sb.from('leads').select('goal').gte('created_at', since);
+  const gc = {};
+  (gl||[]).forEach(x=>{ if(x.goal) gc[x.goal]=(gc[x.goal]||0)+1; });
+  const gt = Object.values(gc).reduce((a,b)=>a+b,0);
+  $('goals').innerHTML = gt ? Object.entries(gc).sort((a,b)=>b[1]-a[1]).map(([k,n])=>
+    `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;gap:12px;font-size:14.5px">
+      <span>${esc(k)}</span><span style="font-family:var(--mono)">${n}</span></div>
+      <div class="bar"><i style="width:${n/gt*100}%"></i></div></div>`).join('')
+    : '<p class="sub">No leads yet.</p>';
+}
+
+/* ---------- leads ---------- */
+const STATUS = {new:'New', contacted:'Contacted', booked:'Call booked', joined:'Joined', not_now:'Not now', declined:'Declined'};
+
+async function loadLeads(){
+  const f = $('leadFilter').value;
+  let q = sb.from('leads').select('*').order('created_at',{ascending:false}).limit(200);
+  if(f) q = q.eq('status', f);
+  const { data } = await q;
+
+  if(!data || !data.length){ $('leadList').innerHTML = '<div class="empty">No leads yet. They will appear here the moment someone fills in the form.</div>'; return; }
+
+  $('leadList').innerHTML = data.map(l => {
+    const when = new Date(l.created_at).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    const cls = l.status==='new'?'new':(l.status==='joined'?'joined':'');
+    return `<div class="lead">
+      <div class="lead-top">
+        <div><div class="lead-name">${esc(l.name)||'No name'}</div>
+        <span class="pill ${cls}">${STATUS[l.status]||l.status}</span></div>
+        <div class="lead-when">${when}</div>
+      </div>
+      <div class="lead-meta">
+        ${esc(l.city)||''}<br>
+        <b>Wants:</b> ${esc(l.goal)||'—'}<br>
+        <b>Tried:</b> ${esc(l.tried)||'—'} &nbsp;·&nbsp; <b>Start:</b> ${esc(l.start_when)||'—'}
+      </div>
+      <div class="lead-actions">
+        <a class="btn sm" href="https://wa.me/${(l.whatsapp||'').replace(/[^0-9]/g,'')}" target="_blank" style="text-decoration:none">WhatsApp</a>
+        <select onchange="setStatus('${l.id}', this.value)">
+          ${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${l.status===k?'selected':''}>${v}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+}
+$('leadFilter').onchange = loadLeads;
+
+window.setStatus = async (id, status) => {
+  const patch = { status };
+  if(status==='contacted') patch.contacted_at = new Date().toISOString();
+  if(status==='joined')    patch.joined_at    = new Date().toISOString();
+  await sb.from('leads').update(patch).eq('id', id);
+  loadStats();
+};
+
+/* ---------- image upload ---------- */
+async function uploadImage(file){
+  const name = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.]/g,'-').toLowerCase();
+  const { error } = await sb.storage.from('images').upload(name, file, { upsert:true });
+  if(error) throw error;
+  const { data } = sb.storage.from('images').getPublicUrl(name);
+  return data.publicUrl;
+}
+
+/* ---------- client results ---------- */
+async function loadResults(){
+  const { data } = await sb.from('client_results').select('*').order('sort_order');
+  if(!data || !data.length){ $('resList').innerHTML = '<div class="empty">No client results yet.</div>'; return; }
+
+  $('resList').innerHTML = data.map(r => `
+    <div class="card">
+      <div class="row2">
+        <div><label>Name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
+        <div><label>Age</label><input value="${esc(r.age)}" data-f="age" data-id="${r.id}"></div>
+      </div>
+      <div class="row2">
+        <div><label>How long</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
+        <div><label>Category</label>
+          <select data-f="category" data-id="${r.id}">
+            ${['fat_loss','muscle','pcos','blood_sugar','glp1'].map(c=>`<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ')}</option>`).join('')}
+          </select></div>
+      </div>
+      <label>Their quote</label><textarea data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
+      <label>Before — what they had tried</label><textarea data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
+      <label>What changed</label><textarea data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
+      <label>Result</label><textarea data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
+
+      <div class="row2">
+        <div><label>Before photo</label>
+          <img class="thumb" src="${r.photo_before||''}">
+          <input type="file" accept="image/*" data-photo="photo_before" data-id="${r.id}"></div>
+        <div><label>After photo</label>
+          <img class="thumb" src="${r.photo_after||''}">
+          <input type="file" accept="image/*" data-photo="photo_after" data-id="${r.id}"></div>
+      </div>
+
+      <div class="row2">
+        <div><label>Weight start (kg)</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
+        <div><label>Weight end (kg)</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
+      </div>
+      <div class="row2">
+        <div><label>Waist start (cm)</label><input value="${esc(r.waist_start)}" data-f="waist_start" data-id="${r.id}"></div>
+        <div><label>Waist end (cm)</label><input value="${esc(r.waist_end)}" data-f="waist_end" data-id="${r.id}"></div>
+      </div>
+      <div class="row2">
+        <div><label>HbA1c start (%)</label><input value="${esc(r.hba1c_start)}" data-f="hba1c_start" data-id="${r.id}"></div>
+        <div><label>HbA1c end (%)</label><input value="${esc(r.hba1c_end)}" data-f="hba1c_end" data-id="${r.id}"></div>
+      </div>
+
+      <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:10px">
+        <input type="checkbox" style="width:20px;margin:0" ${r.consent_given?'checked':''} data-f="consent_given" data-id="${r.id}">
+        I have their written permission
+      </label>
+      <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:16px">
+        <input type="checkbox" style="width:20px;margin:0" ${r.published?'checked':''} data-f="published" data-id="${r.id}">
+        Show on website
+      </label>
+
+      <div style="display:flex;gap:10px">
+        <button class="btn sm" onclick="saveResult('${r.id}')">Save</button>
+        <button class="btn danger" onclick="delResult('${r.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+
+  document.querySelectorAll('[data-photo]').forEach(inp => {
+    inp.onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      flash($('resMsg'),'Uploading photo...');
+      try{
+        const url = await uploadImage(f);
+        await sb.from('client_results').update({[e.target.dataset.photo]: url}).eq('id', e.target.dataset.id);
+        flash($('resMsg'),'Photo uploaded.'); loadResults();
+      }catch(err){ flash($('resMsg'), err.message, false); }
+    };
+  });
+}
+
+window.saveResult = async id => {
+  const patch = {};
+  document.querySelectorAll(`[data-id="${id}"][data-f]`).forEach(el => {
+    patch[el.dataset.f] = el.type==='checkbox' ? el.checked : el.value;
+  });
+  if(patch.published && !patch.consent_given){
+    flash($('resMsg'),'You cannot publish a client without their written permission.', false);
+    return;
+  }
+  const { error } = await sb.from('client_results').update(patch).eq('id', id);
+  flash($('resMsg'), error ? error.message : 'Saved.', !error);
+};
+
+window.delResult = async id => {
+  if(!confirm('Delete this client result? This cannot be undone.')) return;
+  await sb.from('client_results').delete().eq('id', id);
+  loadResults();
+};
+
+$('addRes').onclick = async () => {
+  await sb.from('client_results').insert({ name:'New client', duration:'16 weeks', sort_order:99 });
+  loadResults();
+};
+
+/* ---------- faqs ---------- */
+async function loadFaqs(){
+  const { data } = await sb.from('faqs').select('*').order('sort_order');
+  if(!data || !data.length){ $('faqList').innerHTML='<div class="empty">No questions yet.</div>'; return; }
+  $('faqList').innerHTML = data.map(f => `
+    <div class="card">
+      <label>Order</label><input type="number" value="${f.sort_order||0}" data-q="${f.id}" data-f="sort_order" style="max-width:110px">
+      <label>Question</label><input value="${esc(f.question)}" data-q="${f.id}" data-f="question">
+      <label>Answer</label><textarea data-q="${f.id}" data-f="answer">${esc(f.answer)}</textarea>
+      <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:14px">
+        <input type="checkbox" style="width:20px;margin:0" ${f.published?'checked':''} data-q="${f.id}" data-f="published"> Show on website
+      </label>
+      <div style="display:flex;gap:10px">
+        <button class="btn sm" onclick="saveFaq('${f.id}')">Save</button>
+        <button class="btn danger" onclick="delFaq('${f.id}')">Delete</button>
+      </div>
+    </div>`).join('');
+}
+window.saveFaq = async id => {
+  const patch={};
+  document.querySelectorAll(`[data-q="${id}"]`).forEach(el=>{
+    patch[el.dataset.f] = el.type==='checkbox' ? el.checked : (el.type==='number' ? +el.value : el.value);
+  });
+  const { error } = await sb.from('faqs').update(patch).eq('id', id);
+  flash($('faqMsg'), error ? error.message : 'Saved.', !error);
+};
+window.delFaq = async id => {
+  if(!confirm('Delete this question?')) return;
+  await sb.from('faqs').delete().eq('id', id); loadFaqs();
+};
+$('addFaq').onclick = async () => {
+  await sb.from('faqs').insert({ question:'New question', answer:'Answer here', sort_order:99, published:false });
+  loadFaqs();
+};
+
+/* ---------- settings ---------- */
+const KEYS = ['price','price_note','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
+
+async function loadSettings(){
+  const { data } = await sb.from('site_content').select('*');
+  const map = {}; (data||[]).forEach(r => map[r.key]=r.value);
+  KEYS.forEach(k => { const el=$('s-'+k); if(el) el.value = map[k]||''; });
+  $('th-hero').src  = map.photo_hero  || '';
+  $('th-about').src = map.photo_about || '';
+  window._content = map;
+}
+
+['hero','about'].forEach(which => {
+  $('up-'+which).onchange = async e => {
+    const f=e.target.files[0]; if(!f) return;
+    flash($('setMsg'),'Uploading...');
+    try{
+      const url = await uploadImage(f);
+      await sb.from('site_content').upsert({ key:'photo_'+which, value:url, updated_at:new Date().toISOString() });
+      $('th-'+which).src = url;
+      flash($('setMsg'),'Photo uploaded and live on your website.');
+    }catch(err){ flash($('setMsg'), err.message, false); }
+  };
+});
+
+$('saveSet').onclick = async () => {
+  const rows = KEYS.filter(k=>$('s-'+k)).map(k => ({ key:k, value:$('s-'+k).value, updated_at:new Date().toISOString() }));
+  const { error } = await sb.from('site_content').upsert(rows);
+  flash($('setMsg'), error ? error.message : 'Saved. Your website is updated.', !error);
+};
+
+boot();
+</script>
+</body>
+</html>

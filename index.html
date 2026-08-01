@@ -607,7 +607,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         <a href="#program" class="btn btn-ghost">See how it works</a>
         <p class="cta-note">Takes 60 seconds. We reply on WhatsApp.</p>
       </div>
-      <div class="hero-photo">
+      <div class="hero-photo" id="c-photo-hero">
         <div class="ph-note">Photo placeholder<br>Dr. ARK — portrait<br>Portrait 4:5 · 1200 × 1500px<br>Clinical or neutral setting</div>
       </div>
     </div>
@@ -756,7 +756,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
   <div class="wrap narrow rev">
     <div class="price-card">
       <span class="label">The 16-Week Rebuild with Dr. ARK</span>
-      <div class="price-line"><span class="price-num">PKR 80,000</span><span class="price-per">16 weeks · everything included</span></div>
+      <div class="price-line"><span class="price-num" id="c-price">PKR 80,000</span><span class="price-per" id="c-price-note">16 weeks · everything included</span></div>
 
       <p class="muted" style="font-size:16.5px">Sixteen weeks, not twelve, because that is how long a change you can actually see takes — in the mirror and in your reports.</p>
 
@@ -767,7 +767,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         <div class="stack-row"><span>Someone checking your data every single day</span><span>included</span></div>
         <div class="stack-row"><span>Four live calls with Dr. ARK</span><span>included</span></div>
         <div class="stack-row"><span>Blood tests, where you need them</span><span>included</span></div>
-        <div class="stack-total"><span>Your total</span><span>PKR 80,000</span></div>
+        <div class="stack-total"><span>Your total</span><span id="c-price-total">PKR 80,000</span></div>
       </div>
 
       <p class="muted" style="font-size:16.5px">Founding group — a small number of places, because I read and review every plan myself.</p>
@@ -855,88 +855,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <h2>What this looks like in real life.</h2>
     </div>
 
-    <div class="story rev">
-      <div class="ba">
-        <div class="ba-half"><span class="ba-tag">Before</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-        <div class="ba-half"><span class="ba-tag ba-after">After</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-      </div>
-      <div class="story-body">
-        <div class="story-meta">[Name] · [age] · [duration]</div>
-        <p class="story-quote">"[Their strongest line, in their own words.]"</p>
-        <p class="story-text"><strong>Before:</strong> [What they had tried and why it failed.]<br>
-        <strong>What changed:</strong> [The two or three main things you did differently.]<br>
-        <strong>Result:</strong> [What happened, in plain words.]</p>
-        <div class="markers">
-          <div class="marker" style="--w:58%">
-            <div class="marker-tip">Weight &nbsp;[00] kg → [00] kg</div>
-            <div class="marker-top"><span class="marker-name">Weight</span><span class="marker-span">[00] weeks</span></div>
-            <div class="marker-track">
-              <div class="marker-line"></div><div class="marker-fill"></div>
-              <div class="dot-start" style="left:100%"></div>
-              <div class="dot-end" style="left:42%"></div>
-            </div>
-            <div class="marker-vals">
-              <span class="val val-now">[00] kg<span class="val-cap">now</span></span>
-              <span class="val val-was">[00] kg<span class="val-cap">start</span></span>
-            </div>
-          </div>
-          <div class="marker" style="--w:72%">
-            <div class="marker-tip">Waist &nbsp;[00] cm → [00] cm</div>
-            <div class="marker-top"><span class="marker-name">Waist</span><span class="marker-span">[00] weeks</span></div>
-            <div class="marker-track">
-              <div class="marker-line"></div><div class="marker-fill"></div>
-              <div class="dot-start" style="left:100%"></div>
-              <div class="dot-end" style="left:28%"></div>
-            </div>
-            <div class="marker-vals">
-              <span class="val val-now">[00] cm<span class="val-cap">now</span></span>
-              <span class="val val-was">[00] cm<span class="val-cap">start</span></span>
-            </div>
-          </div>
-          <div class="marker" style="--w:64%">
-            <div class="marker-tip">HbA1c &nbsp;[0.0]% → [0.0]%</div>
-            <div class="marker-top"><span class="marker-name">HbA1c</span><span class="marker-span">[00] weeks</span></div>
-            <div class="marker-track">
-              <div class="marker-line"></div><div class="marker-fill"></div>
-              <div class="dot-start" style="left:100%"></div>
-              <div class="dot-end" style="left:36%"></div>
-            </div>
-            <div class="marker-vals">
-              <span class="val val-now">[0.0] %<span class="val-cap">now</span></span>
-              <span class="val val-was">[0.0] %<span class="val-cap">start</span></span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="story rev">
-      <div class="ba">
-        <div class="ba-half"><span class="ba-tag">Before</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-        <div class="ba-half"><span class="ba-tag ba-after">After</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-      </div>
-      <div class="story-body">
-        <div class="story-meta">[Name] · [age] · [duration]</div>
-        <p class="story-quote">"[Short quote in their own words.]"</p>
-        <p class="story-text"><strong>Before:</strong> [Context.]<br>
-        <strong>What changed:</strong> [What you did.]<br>
-        <strong>Result:</strong> [Outcome.]</p>
-      </div>
-    </div>
-
-    <div class="story rev">
-      <div class="ba">
-        <div class="ba-half"><span class="ba-tag">Before</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-        <div class="ba-half"><span class="ba-tag ba-after">After</span><div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div></div>
-      </div>
-      <div class="story-body">
-        <div class="story-meta">[Name] · [age] · [duration]</div>
-        <p class="story-quote">"[Short quote in their own words.]"</p>
-        <p class="story-text"><strong>Before:</strong> [Context.]<br>
-        <strong>What changed:</strong> [What you did.]<br>
-        <strong>Result:</strong> [Outcome.]</p>
-      </div>
-    </div>
+    <div id="c-results"></div>
   </div>
 </section>
 
@@ -1018,7 +937,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         <p class="muted" style="font-size:16px">I take a small number of clients at a time and read everything myself.</p>
       </div>
       <div>
-        <div class="hero-photo" style="margin-bottom:16px">
+        <div class="hero-photo" id="c-photo-about" style="margin-bottom:16px">
           <div class="ph-note">Photo placeholder<br>Dr. ARK — seated / consulting<br>Portrait 4:5 · 1200 × 1500px</div>
         </div>
         <button class="video-slot" id="videoBtn" aria-label="Play welcome video">
@@ -1099,21 +1018,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
   <div class="wrap narrow rev">
     <span class="label">Questions</span>
     <h2>The things people ask first.</h2>
-    <div class="faq">
-      <details><summary>Can I eat rice and roti?</summary><div class="ans">Yes. Rice and roti did not make you gain weight. Eating more than your body uses did. We work out how much you can have and when to have it.</div></details>
-      <details><summary>Is this for women too?</summary><div class="ans">Yes. Roughly half the plan is the same for everyone. What changes is training, calories, and things like PCOS, periods and pregnancy history, which are all taken into account.</div></details>
-      <details><summary>Can I build muscle and lose fat at the same time?</summary><div class="ans">Yes, especially if you are new to proper training or coming back after a break. It needs enough protein, real resistance training, and a sensible calorie level — which is exactly how the plan is built.</div></details>
-      <details><summary>What is the daily monitoring?</summary><div class="ans">You log your workouts, meals and a few habits in the app. It takes under two minutes. I see it daily, so when something needs changing it gets changed immediately instead of a week later.</div></details>
-      <details><summary>Which app do you use?</summary><div class="ans">Trainerize at the moment, with our own app coming. Everything sits in one place — your plan, your workouts, your logs and your progress.</div></details>
-      <details><summary>Why sixteen weeks and not twelve?</summary><div class="ans">Twelve weeks gets you started. Sixteen gets you a change you can actually see, and gives the new habits enough time to stop feeling like effort.</div></details>
-      <details><summary>I have paid a coach before and it did not work.</summary><div class="ans">Ask yourself what you actually got. Usually one plan, sent once, with nobody watching and nobody checking whether something else was getting in the way.</div></details>
-      <details><summary>How much time does this take?</summary><div class="ans">Two to four hours a week for training, plus about two minutes a day in the app.</div></details>
-      <details><summary>Do I need blood tests?</summary><div class="ans">Not always. If you have recent reports, bring them. If your history suggests tests would help, we arrange them early on.</div></details>
-      <details><summary>Do I need a gym?</summary><div class="ans">No. The plan is built around what you have. Home training works if it is programmed properly.</div></details>
-      <details><summary>I am not in Pakistan. Can I still do this?</summary><div class="ans">Yes. Everything runs online and clients join from wherever they are.</div></details>
-      <details><summary>What does it cost?</summary><div class="ans">PKR 80,000 for the full sixteen weeks, everything included. Founding group pricing, small number of places.</div></details>
-      <details><summary>What happens after sixteen weeks?</summary><div class="ans">You get a written plan for keeping your results and running it yourself. If you want lighter ongoing support, we talk about it near the end.</div></details>
-    </div>
+    <div class="faq" id="c-faq"></div>
   </div>
 </section>
 
@@ -1201,6 +1106,16 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
   <a href="#start" class="btn">Get Started</a>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="content.js"></script>
+<script>
+/* ============================================================
+   SUPABASE — paste your details here (same as admin.html)
+   ============================================================ */
+const SB_URL = 'https://sexvpekhjeweykcibhmr.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNleHZwZWtoamV3ZXlrY2liaG1yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MDc0MDAsImV4cCI6MjEwMTE4MzQwMH0.fmFicgxqW9PgPBrhnEXm_rGlkY-UMv53bqLObqr6uKA';
+/* ============================================================ */
+</script>
 <script>
 const burger=document.getElementById('burger'),menu=document.getElementById('menu');
 burger.addEventListener('click',()=>{
@@ -1224,6 +1139,187 @@ window.addEventListener('scroll',()=>{
 },{passive:true});
 toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
+
+/* ---------- fill the page from content.js ---------- */
+(function(){
+  if(typeof CONTENT === 'undefined') return;
+  const C = CONTENT;
+  const set = (id, val) => { const el=document.getElementById(id); if(el && val) el.textContent = val; };
+
+  /* price */
+  set('c-price', C.price);
+  set('c-price-note', C.priceNote);
+  set('c-price-total', C.price);
+
+  /* photos of Dr ARK */
+  const photo = (id, src, alt) => {
+    const el = document.getElementById(id);
+    if(el && src){ el.innerHTML = '<img src="'+src+'" alt="'+alt+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:3px">'; }
+  };
+  photo('c-photo-hero', C.photoHero, 'Dr. Abdur Rehman Khan');
+  photo('c-photo-about', C.photoAbout, 'Dr. Abdur Rehman Khan');
+
+  /* contact links */
+  const wa = C.whatsappNumber;
+  if(wa){
+    document.querySelectorAll('a[href*="wa.me"]').forEach(a=>{ a.href = 'https://wa.me/'+wa; });
+    window.WA_OVERRIDE = wa;
+  }
+
+  /* client results */
+  const box = document.getElementById('c-results');
+  if(box && C.clients){
+    box.innerHTML = C.clients.map(cl => {
+      const half = (src, tag, cls) =>
+        '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
+        (src ? '<img src="'+src+'" alt="'+tag+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+             : '<div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div>') + '</div>';
+
+      const marker = (label, s, e, unit, w) => {
+        if(!s || !e) return '';
+        return '<div class="marker" style="--w:'+w+'">' +
+          '<div class="marker-tip">'+label+' &nbsp;'+s+' → '+e+'</div>' +
+          '<div class="marker-top"><span class="marker-name">'+label+'</span><span class="marker-span">'+(cl.duration||'')+'</span></div>' +
+          '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
+          '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
+          '<div class="marker-vals"><span class="val val-now">'+e+' '+unit+'<span class="val-cap">now</span></span>' +
+          '<span class="val val-was">'+s+' '+unit+'<span class="val-cap">start</span></span></div></div>';
+      };
+
+      const markers = [
+        marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%'),
+        marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%'),
+        marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%')
+      ].join('');
+
+      const line = (lbl, txt) => txt ? '<strong>'+lbl+':</strong> '+txt+'<br>' : '';
+
+      return '<div class="story rev">' +
+        '<div class="ba">' + half(cl.photoBefore,'Before','') + half(cl.photoAfter,'After','ba-after') + '</div>' +
+        '<div class="story-body">' +
+          '<div class="story-meta">'+[cl.name,cl.age,cl.duration].filter(Boolean).join(' · ')+'</div>' +
+          (cl.quote ? '<p class="story-quote">"'+cl.quote+'"</p>' : '') +
+          '<p class="story-text">'+line('Before',cl.before)+line('What changed',cl.changed)+line('Result',cl.result)+'</p>' +
+          (markers ? '<div class="markers">'+markers+'</div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+
+  /* FAQ */
+  const faqBox = document.getElementById('c-faq');
+  if(faqBox && C.faqs){
+    faqBox.innerHTML = C.faqs.map(f =>
+      '<details><summary>'+f.q+'</summary><div class="ans">'+f.a+'</div></details>'
+    ).join('');
+  }
+
+  /* re-observe newly created elements for scroll animation */
+  document.querySelectorAll('.rev:not(.seen), .marker:not(.seen)').forEach(el=>io.observe(el));
+})();
+
+
+/* ============================================================
+   LIVE CONTENT FROM SUPABASE
+   Loads your price, photos, results and FAQs from the dashboard.
+   If Supabase is unreachable, the page still works using content.js.
+   ============================================================ */
+(async function(){
+  if(typeof supabase === 'undefined' || SB_URL.indexOf('PASTE') === 0) return;
+  const db = supabase.createClient(SB_URL, SB_KEY);
+  window._db = db;
+
+  /* --- track the visit --- */
+  const track = (event) => {
+    db.from('page_views').insert({
+      path: location.pathname,
+      referrer: document.referrer || null,
+      device: /Mobi|Android|iPhone/i.test(navigator.userAgent) ? 'mobile' : 'desktop',
+      event
+    }).then(()=>{}, ()=>{});
+  };
+  track('view');
+  let started = false;
+  document.querySelectorAll('#leadForm input, #leadForm select').forEach(el=>{
+    el.addEventListener('focus', ()=>{ if(!started){ started=true; track('form_start'); } }, {once:true});
+  });
+  window._track = track;
+
+  const set = (id,v) => { const el=document.getElementById(id); if(el&&v) el.textContent=v; };
+
+  /* --- settings --- */
+  try{
+    const { data } = await db.from('site_content').select('key,value');
+    const c = {}; (data||[]).forEach(r=>c[r.key]=r.value);
+
+    set('c-price', c.price); set('c-price-total', c.price); set('c-price-note', c.price_note);
+
+    const photo = (id,src,alt) => {
+      const el=document.getElementById(id);
+      if(el&&src) el.innerHTML='<img src="'+src+'" alt="'+alt+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:3px">';
+    };
+    photo('c-photo-hero', c.photo_hero, 'Dr. Abdur Rehman Khan');
+    photo('c-photo-about', c.photo_about, 'Dr. Abdur Rehman Khan');
+
+    if(c.whatsapp_number){
+      window.WA_OVERRIDE = c.whatsapp_number;
+      document.querySelectorAll('a[href*="wa.me"]').forEach(a=>a.href='https://wa.me/'+c.whatsapp_number);
+    }
+    if(c.email) document.querySelectorAll('a[href^="mailto:"]').forEach(a=>{ a.href='mailto:'+c.email; a.textContent=c.email; });
+    if(c.video_url) window._videoUrl = c.video_url;
+  }catch(e){}
+
+  /* --- client results --- */
+  try{
+    const { data: rows } = await db.from('client_results')
+      .select('*').eq('published', true).order('sort_order');
+    const box = document.getElementById('c-results');
+    if(box && rows && rows.length){
+      const marker = (label,s,e,unit,w,dur) => {
+        if(!s||!e) return '';
+        return '<div class="marker" style="--w:'+w+'">'+
+          '<div class="marker-tip">'+label+' &nbsp;'+s+' → '+e+'</div>'+
+          '<div class="marker-top"><span class="marker-name">'+label+'</span><span class="marker-span">'+(dur||'')+'</span></div>'+
+          '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>'+
+          '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>'+
+          '<div class="marker-vals"><span class="val val-now">'+e+' '+unit+'<span class="val-cap">now</span></span>'+
+          '<span class="val val-was">'+s+' '+unit+'<span class="val-cap">start</span></span></div></div>';
+      };
+      const half = (src,tag,cls) =>
+        '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>'+
+        (src ? '<img src="'+src+'" alt="'+tag+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
+             : '<div class="ph-note">Photo<br>3:4</div>')+'</div>';
+      const line = (l,t) => t ? '<strong>'+l+':</strong> '+t+'<br>' : '';
+
+      box.innerHTML = rows.map(r => {
+        const m = [
+          marker('Weight', r.weight_start, r.weight_end, 'kg', '58%', r.duration),
+          marker('Waist',  r.waist_start,  r.waist_end,  'cm', '72%', r.duration),
+          marker('HbA1c',  r.hba1c_start,  r.hba1c_end,  '%',  '64%', r.duration)
+        ].join('');
+        return '<div class="story rev">'+
+          '<div class="ba">'+half(r.photo_before,'Before','')+half(r.photo_after,'After','ba-after')+'</div>'+
+          '<div class="story-body">'+
+          '<div class="story-meta">'+[r.name,r.age,r.duration].filter(Boolean).join(' · ')+'</div>'+
+          (r.quote?'<p class="story-quote">"'+r.quote+'"</p>':'')+
+          '<p class="story-text">'+line('Before',r.before_text)+line('What changed',r.changed_text)+line('Result',r.result_text)+'</p>'+
+          (m?'<div class="markers">'+m+'</div>':'')+
+          '</div></div>';
+      }).join('');
+    }
+  }catch(e){}
+
+  /* --- faqs --- */
+  try{
+    const { data: fq } = await db.from('faqs').select('*').eq('published', true).order('sort_order');
+    const fbox = document.getElementById('c-faq');
+    if(fbox && fq && fq.length){
+      fbox.innerHTML = fq.map(f=>'<details><summary>'+f.question+'</summary><div class="ans">'+f.answer+'</div></details>').join('');
+    }
+  }catch(e){}
+
+  document.querySelectorAll('.rev:not(.seen), .marker:not(.seen)').forEach(el=>io.observe(el));
+})();
+
 /* video lightbox */
 const lb=document.getElementById('lightbox'),lbClose=document.getElementById('lbClose');
 document.getElementById('videoBtn').addEventListener('click',()=>{
@@ -1235,7 +1331,7 @@ lb.addEventListener('click',e=>{if(e.target===lb)closeLb()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb()});
 
 /* form -> opens a pre-filled WhatsApp message */
-const WA_NUMBER = '923329999875';
+const WA_NUMBER = (window.WA_OVERRIDE || '923329999875');
 
 const form=document.getElementById('leadForm'),note=document.getElementById('formNote');
 
@@ -1258,7 +1354,15 @@ form.addEventListener('submit',e=>{
     '\nAlready tried: ' + v('f-tried') +
     '\nWant to start: ' + v('f-when');
 
-  /* TODO: also POST these values to Supabase before redirecting */
+  /* save the lead first, so it is never lost */
+  if(window._db){
+    window._db.from('leads').insert({
+      name: v('f-name'), whatsapp: v('f-wa'), city: v('f-city'),
+      goal: v('f-goal'), tried: v('f-tried'), start_when: v('f-when'),
+      status: 'new'
+    }).then(()=>{}, ()=>{});
+    if(window._track) window._track('form_submit');
+  }
 
   note.textContent='Opening WhatsApp...';
   window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
