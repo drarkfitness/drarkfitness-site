@@ -461,10 +461,51 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 
 /* before / after */
 .ba{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
-.ba-half{position:relative;aspect-ratio:3/4;background:#EDEAE3;display:flex;align-items:center;justify-content:center}
+.ba-half{position:relative;aspect-ratio:3/4;background:#EDEAE3;overflow:hidden}
 .ba-half:first-child{border-right:1px solid var(--line)}
-.ba-tag{position:absolute;top:10px;left:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;background:var(--navy);color:var(--paper);padding:5px 9px;border-radius:3px}
+.ba-half img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;z-index:1}
+.ba-half .ph-note{
+  position:absolute;inset:8px;z-index:0;
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  border:1px dashed rgba(13,27,62,0.28);border-radius:4px;background:#EDEAE3;
+}
+.ba-tag{position:absolute;top:10px;left:10px;z-index:2;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;background:var(--navy);color:var(--paper);padding:5px 9px;border-radius:3px}
 .ba-tag.ba-after{background:#256B4C}
+
+/* ---------- results carousel ---------- */
+.carousel{position:relative;max-width:760px;margin:0 auto}
+.car-viewport{overflow:hidden;border:1px solid var(--line);border-radius:4px;background:var(--white);touch-action:pan-y}
+.car-track{display:flex;transition:transform .5s cubic-bezier(.22,.8,.3,1)}
+.car-slide{flex:0 0 100%;width:100%;min-width:0}
+.car-body{padding:24px 22px 26px}
+.car-body .story-meta{margin-bottom:14px}
+.car-body .markers{margin-bottom:0}
+.car-body .marker:last-child{padding-bottom:0}
+.car-controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:22px}
+.car-arrow{
+  display:none;width:44px;height:44px;flex:none;
+  align-items:center;justify-content:center;
+  background:var(--white);border:1px solid var(--line);border-radius:4px;
+  color:var(--navy);font-family:var(--mono);font-size:20px;line-height:1;cursor:pointer;
+  transition:border-color .18s ease;
+}
+.car-arrow:hover{border-color:var(--navy)}
+.car-arrow:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.car-dots{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.car-dot{
+  width:24px;height:24px;flex:none;padding:0;border:0;background:transparent;
+  position:relative;cursor:pointer;
+}
+.car-dot::before{
+  content:"";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:9px;height:9px;border-radius:50%;border:1px solid var(--slate);
+  transition:background .18s ease,border-color .18s ease;
+}
+.car-dot[aria-current="true"]::before{background:var(--gold);border-color:#9A7C22}
+.car-dot:focus-visible{outline:2px solid var(--gold);outline-offset:0;border-radius:4px}
+@media (min-width:700px){
+  .car-arrow{display:flex}
+}
 
 /* video button + lightbox */
 .video-slot{position:relative;width:100%;aspect-ratio:16/9;background:#EDEAE3;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -1131,6 +1172,156 @@ const io=new IntersectionObserver(es=>{
 },{threshold:0.12,rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
 
+/* ============================================================
+   CLIENT RESULTS — shared renderer + swipeable carousel
+   Both the content.js fallback and the live Supabase loader
+   normalise their data to the same shape and call renderResults,
+   so what visitors see always matches the dashboard exactly.
+   ============================================================ */
+const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+function renderResults(clients){
+  const box = document.getElementById('c-results');
+  if(!box) return;
+  const list = (clients||[]).filter(Boolean);
+  if(!list.length) return;
+
+  /* if a carousel was already built (e.g. fallback before Supabase), stop its timer */
+  if(typeof window._carouselCleanup === 'function') window._carouselCleanup();
+
+  const isUrl = u => /^(https?:\/\/|\/|data:image\/)/i.test((u||'').trim());
+
+  /* one before/after frame — only render <img> for a real URL, and
+     fall back to the dashed placeholder if the URL is empty OR breaks. */
+  const half = (src, focal, tag, cls) => {
+    const url = (src||'').trim();
+    const pos = (focal||'').trim() || '50% 50%';
+    const img = isUrl(url)
+      ? '<img src="'+_attr(url)+'" alt="'+_attr(tag)+'" loading="lazy" ' +
+        'style="object-position:'+_attr(pos)+'" ' +
+        'onerror="this.remove()">'
+      : '';
+    return '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
+      '<div class="ph-note">No photo</div>' + img + '</div>';
+  };
+
+  /* signature marker row — kept identical to the original design */
+  const marker = (label, s, e, unit, w, dur) => {
+    if(!s || !e) return '';
+    return '<div class="marker" style="--w:'+w+'">' +
+      '<div class="marker-tip">'+_txt(label)+' &nbsp;'+_txt(s)+' → '+_txt(e)+'</div>' +
+      '<div class="marker-top"><span class="marker-name">'+_txt(label)+'</span><span class="marker-span">'+_txt(dur||'')+'</span></div>' +
+      '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
+      '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
+      '<div class="marker-vals"><span class="val val-now">'+_txt(e)+' '+_txt(unit)+'<span class="val-cap">now</span></span>' +
+      '<span class="val val-was">'+_txt(s)+' '+_txt(unit)+'<span class="val-cap">start</span></span></div></div>';
+  };
+
+  const line = (lbl, txt) => txt ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : '';
+
+  const slides = list.map(cl => {
+    const markers = [
+      marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
+      marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
+      marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
+    ].join('');
+    const story = line('Before', cl.before) + line('What changed', cl.changed) + line('Result', cl.result);
+    return '<div class="car-slide">' +
+      '<div class="ba">' + half(cl.photoBefore, cl.focalBefore, 'Before', '') + half(cl.photoAfter, cl.focalAfter, 'After', 'ba-after') + '</div>' +
+      '<div class="car-body">' +
+        '<div class="story-meta">'+[cl.name,cl.age,cl.duration].filter(Boolean).map(_txt).join(' · ')+'</div>' +
+        (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+        (story ? '<p class="story-text">'+story+'</p>' : '') +
+        (markers ? '<div class="markers">'+markers+'</div>' : '') +
+      '</div></div>';
+  }).join('');
+
+  const many = list.length > 1;
+  const dots = many ? list.map((_,i)=>'<button class="car-dot" type="button" aria-label="Go to client '+(i+1)+'"></button>').join('') : '';
+  const controls = many
+    ? '<div class="car-controls">' +
+        '<button class="car-arrow car-prev" type="button" aria-label="Previous client">&#8249;</button>' +
+        '<div class="car-dots">'+dots+'</div>' +
+        '<button class="car-arrow car-next" type="button" aria-label="Next client">&#8250;</button>' +
+      '</div>'
+    : '';
+
+  box.innerHTML =
+    '<div class="carousel rev" role="region" aria-roledescription="carousel" aria-label="Client results">' +
+      '<div class="car-viewport"><div class="car-track">'+slides+'</div></div>' +
+      controls +
+    '</div>';
+
+  initResultsCarousel(box.querySelector('.carousel'));
+  document.querySelectorAll('.rev:not(.seen), .marker:not(.seen)').forEach(el=>io.observe(el));
+}
+
+function initResultsCarousel(root){
+  if(!root) return;
+  const track  = root.querySelector('.car-track');
+  const vp     = root.querySelector('.car-viewport');
+  const slides = Array.prototype.slice.call(root.querySelectorAll('.car-slide'));
+  const dots   = Array.prototype.slice.call(root.querySelectorAll('.car-dot'));
+  const prev   = root.querySelector('.car-prev');
+  const next   = root.querySelector('.car-next');
+  const n = slides.length;
+  if(!track || n === 0) return;
+
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  let i = 0, timer = null, stopped = false;
+
+  const go = idx => {
+    i = (idx % n + n) % n;
+    track.style.transform = 'translateX(' + (-i * 100) + '%)';
+    dots.forEach((d,k)=>d.setAttribute('aria-current', k === i ? 'true' : 'false'));
+    slides.forEach((s,k)=>s.setAttribute('aria-hidden', k === i ? 'false' : 'true'));
+  };
+  const stop  = () => { if(timer){ clearInterval(timer); timer = null; } };
+  const start = () => { if(reduce || stopped || n < 2) return; stop(); timer = setInterval(()=>go(i+1), 4000); };
+  window._carouselCleanup = () => { stopped = true; stop(); };
+  const stopForever = () => { stopped = true; stop(); };  /* permanent after a manual swipe */
+
+  if(prev) prev.addEventListener('click', ()=>{ stopForever(); go(i-1); });
+  if(next) next.addEventListener('click', ()=>{ stopForever(); go(i+1); });
+  dots.forEach((d,k)=>d.addEventListener('click', ()=>{ stopForever(); go(k); }));
+
+  /* pause on hover, resume when the pointer leaves (unless already stopped) */
+  root.addEventListener('mouseenter', stop);
+  root.addEventListener('mouseleave', ()=>{ if(!stopped) start(); });
+
+  /* touch: live drag-follow, snap on release, threshold counts as a manual swipe */
+  let x0 = 0, y0 = 0, dx = 0, dragging = false, horiz = null;
+  vp.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    x0 = t.clientX; y0 = t.clientY; dx = 0; horiz = null; dragging = true;
+    stop();
+  }, {passive:true});
+  vp.addEventListener('touchmove', e => {
+    if(!dragging) return;
+    const t = e.touches[0];
+    dx = t.clientX - x0;
+    const dy = t.clientY - y0;
+    if(horiz === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) horiz = Math.abs(dx) > Math.abs(dy);
+    if(horiz){
+      track.style.transition = 'none';
+      track.style.transform = 'translateX(calc(' + (-i * 100) + '% + ' + dx + 'px))';
+    }
+  }, {passive:true});
+  const end = () => {
+    if(!dragging) return;
+    dragging = false;
+    track.style.transition = '';
+    if(horiz && Math.abs(dx) > 40){ stopForever(); go(i + (dx < 0 ? 1 : -1)); }
+    else { go(i); if(!stopped) start(); }
+  };
+  vp.addEventListener('touchend', end);
+  vp.addEventListener('touchcancel', end);
+
+  go(0);
+  start();
+}
+
 const sticky=document.getElementById('sticky'),toTop=document.getElementById('toTop');
 window.addEventListener('scroll',()=>{
   const y=window.scrollY;
@@ -1166,43 +1357,17 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     window.WA_OVERRIDE = wa;
   }
 
-  /* client results */
-  const box = document.getElementById('c-results');
-  if(box && C.clients){
-    box.innerHTML = C.clients.map(cl => {
-      const half = (src, tag, cls) =>
-        '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
-        (src ? '<img src="'+src+'" alt="'+tag+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
-             : '<div class="ph-note">Client photo<br>3:4 · 900 × 1200px</div>') + '</div>';
-
-      const marker = (label, s, e, unit, w) => {
-        if(!s || !e) return '';
-        return '<div class="marker" style="--w:'+w+'">' +
-          '<div class="marker-tip">'+label+' &nbsp;'+s+' → '+e+'</div>' +
-          '<div class="marker-top"><span class="marker-name">'+label+'</span><span class="marker-span">'+(cl.duration||'')+'</span></div>' +
-          '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
-          '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
-          '<div class="marker-vals"><span class="val val-now">'+e+' '+unit+'<span class="val-cap">now</span></span>' +
-          '<span class="val val-was">'+s+' '+unit+'<span class="val-cap">start</span></span></div></div>';
-      };
-
-      const markers = [
-        marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%'),
-        marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%'),
-        marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%')
-      ].join('');
-
-      const line = (lbl, txt) => txt ? '<strong>'+lbl+':</strong> '+txt+'<br>' : '';
-
-      return '<div class="story rev">' +
-        '<div class="ba">' + half(cl.photoBefore,'Before','') + half(cl.photoAfter,'After','ba-after') + '</div>' +
-        '<div class="story-body">' +
-          '<div class="story-meta">'+[cl.name,cl.age,cl.duration].filter(Boolean).join(' · ')+'</div>' +
-          (cl.quote ? '<p class="story-quote">"'+cl.quote+'"</p>' : '') +
-          '<p class="story-text">'+line('Before',cl.before)+line('What changed',cl.changed)+line('Result',cl.result)+'</p>' +
-          (markers ? '<div class="markers">'+markers+'</div>' : '') +
-        '</div></div>';
-    }).join('');
+  /* client results — normalise then hand to the shared carousel renderer */
+  if(Array.isArray(C.clients)){
+    renderResults(C.clients.map(cl => ({
+      name: cl.name, age: cl.age, duration: cl.duration,
+      quote: cl.quote, before: cl.before, changed: cl.changed, result: cl.result,
+      photoBefore: cl.photoBefore, photoAfter: cl.photoAfter,
+      focalBefore: cl.focalBefore, focalAfter: cl.focalAfter,
+      weightStart: cl.weightStart, weightEnd: cl.weightEnd,
+      waistStart: cl.waistStart, waistEnd: cl.waistEnd,
+      hba1cStart: cl.hba1cStart, hba1cEnd: cl.hba1cEnd
+    })));
   }
 
   /* FAQ */
@@ -1272,39 +1437,17 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   try{
     const { data: rows } = await db.from('client_results')
       .select('*').eq('published', true).order('sort_order');
-    const box = document.getElementById('c-results');
-    if(box && rows && rows.length){
-      const marker = (label,s,e,unit,w,dur) => {
-        if(!s||!e) return '';
-        return '<div class="marker" style="--w:'+w+'">'+
-          '<div class="marker-tip">'+label+' &nbsp;'+s+' → '+e+'</div>'+
-          '<div class="marker-top"><span class="marker-name">'+label+'</span><span class="marker-span">'+(dur||'')+'</span></div>'+
-          '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>'+
-          '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>'+
-          '<div class="marker-vals"><span class="val val-now">'+e+' '+unit+'<span class="val-cap">now</span></span>'+
-          '<span class="val val-was">'+s+' '+unit+'<span class="val-cap">start</span></span></div></div>';
-      };
-      const half = (src,tag,cls) =>
-        '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>'+
-        (src ? '<img src="'+src+'" alt="'+tag+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
-             : '<div class="ph-note">Photo<br>3:4</div>')+'</div>';
-      const line = (l,t) => t ? '<strong>'+l+':</strong> '+t+'<br>' : '';
-
-      box.innerHTML = rows.map(r => {
-        const m = [
-          marker('Weight', r.weight_start, r.weight_end, 'kg', '58%', r.duration),
-          marker('Waist',  r.waist_start,  r.waist_end,  'cm', '72%', r.duration),
-          marker('HbA1c',  r.hba1c_start,  r.hba1c_end,  '%',  '64%', r.duration)
-        ].join('');
-        return '<div class="story rev">'+
-          '<div class="ba">'+half(r.photo_before,'Before','')+half(r.photo_after,'After','ba-after')+'</div>'+
-          '<div class="story-body">'+
-          '<div class="story-meta">'+[r.name,r.age,r.duration].filter(Boolean).join(' · ')+'</div>'+
-          (r.quote?'<p class="story-quote">"'+r.quote+'"</p>':'')+
-          '<p class="story-text">'+line('Before',r.before_text)+line('What changed',r.changed_text)+line('Result',r.result_text)+'</p>'+
-          (m?'<div class="markers">'+m+'</div>':'')+
-          '</div></div>';
-      }).join('');
+    if(rows && rows.length){
+      /* map the dashboard columns to the shared shape, same fields, same order */
+      renderResults(rows.map(r => ({
+        name: r.name, age: r.age, duration: r.duration,
+        quote: r.quote, before: r.before_text, changed: r.changed_text, result: r.result_text,
+        photoBefore: r.photo_before, photoAfter: r.photo_after,
+        focalBefore: r.focal_before, focalAfter: r.focal_after,
+        weightStart: r.weight_start, weightEnd: r.weight_end,
+        waistStart: r.waist_start, waistEnd: r.waist_end,
+        hba1cStart: r.hba1c_start, hba1cEnd: r.hba1c_end
+      })));
     }
   }catch(e){}
 
