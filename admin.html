@@ -47,6 +47,9 @@ h2{font-size:20px;margin-bottom:4px}
 .card h3{font-size:16.5px;margin-bottom:14px}
 
 label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate);margin:0 0 6px}
+label.big{font-family:var(--body);font-size:15px;letter-spacing:0;text-transform:none;color:var(--navy);font-weight:600}
+.hint{font-size:13px;color:var(--slate);margin:-8px 0 14px;line-height:1.5}
+.note{font-size:14.5px;color:var(--navy);background:rgba(201,168,76,.12);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:5px;padding:11px 14px;margin-bottom:18px}
 input,select,textarea{width:100%;padding:12px;font-family:var(--body);font-size:16px;border:1px solid var(--line);border-radius:5px;background:var(--white);color:var(--navy);margin-bottom:14px}
 textarea{min-height:88px;resize:vertical}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:0}
@@ -168,6 +171,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
   <section class="panel" id="p-results">
     <h2>Client Results</h2>
     <p class="sub">Only ones marked "Show on website" appear publicly.</p>
+    <p class="note">Everything you enter for one client stays together in that client's box, and appears on your website as one story — their words, their photos and their numbers, all in one place.</p>
     <div class="msg" id="resMsg"></div>
     <button class="btn" id="addRes" style="margin-bottom:16px">+ Add a client</button>
     <div id="resList"></div>
@@ -216,13 +220,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 
     <div class="card">
       <h3>Your photos</h3>
-      <label>Main photo (top of the page)</label>
+      <label class="big">Your main photo — top of the homepage. Portrait, 4:5 shape.</label>
       <img class="thumb" id="th-hero" style="aspect-ratio:4/5">
       <input type="file" accept="image/*" id="up-hero">
-      <label style="margin-top:14px">About photo</label>
+      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide).</p>
+
+      <label class="big" style="margin-top:6px">Your About photo — you seated or working. Portrait, 4:5 shape.</label>
       <img class="thumb" id="th-about" style="aspect-ratio:4/5">
       <input type="file" accept="image/*" id="up-about">
-      <label style="margin-top:14px">Welcome video link (YouTube)</label>
+      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide).</p>
+
+      <label style="margin-top:6px">Welcome video link (YouTube)</label>
       <input id="s-video_url" placeholder="https://www.youtube.com/embed/...">
     </div>
 
@@ -402,31 +410,40 @@ async function loadResults(){
 
   $('resList').innerHTML = data.map(r => `
     <div class="card">
+
+      <!-- 1. Who they are -->
       <div class="row2">
-        <div><label>Name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
-        <div><label>Age</label><input value="${esc(r.age)}" data-f="age" data-id="${r.id}"></div>
+        <div><label>Their name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
+        <div><label>Their age</label><input value="${esc(r.age)}" data-f="age" data-id="${r.id}"></div>
       </div>
       <div class="row2">
-        <div><label>How long</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
+        <div><label>How many weeks</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
         <div><label>Category</label>
           <select data-f="category" data-id="${r.id}">
             ${['fat_loss','muscle','pcos','blood_sugar','glp1'].map(c=>`<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ')}</option>`).join('')}
           </select></div>
       </div>
-      <label>Their quote</label><textarea data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
+
+      <!-- 2. Their quote -->
+      <label>What they said, in their own words</label><textarea data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
+
+      <!-- 3. The story -->
       <label>Before — what they had tried</label><textarea data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
       <label>What changed</label><textarea data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
       <label>Result</label><textarea data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
 
+      <!-- 4. Their photos, side by side -->
       <div class="row2">
-        <div><label>Before photo</label>
+        <div><label>BEFORE photo</label>
           <img class="thumb" src="${r.photo_before||''}">
           <input type="file" accept="image/*" data-photo="photo_before" data-id="${r.id}"></div>
-        <div><label>After photo</label>
+        <div><label>AFTER photo</label>
           <img class="thumb" src="${r.photo_after||''}">
           <input type="file" accept="image/*" data-photo="photo_after" data-id="${r.id}"></div>
       </div>
+      <p class="hint">Both photos should be portrait, 3:4 shape (taller than they are wide).</p>
 
+      <!-- 5. Their numbers -->
       <div class="row2">
         <div><label>Weight start (kg)</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
         <div><label>Weight end (kg)</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
@@ -440,6 +457,7 @@ async function loadResults(){
         <div><label>HbA1c end (%)</label><input value="${esc(r.hba1c_end)}" data-f="hba1c_end" data-id="${r.id}"></div>
       </div>
 
+      <!-- 6. The two tick boxes -->
       <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:10px">
         <input type="checkbox" style="width:20px;margin:0" ${r.consent_given?'checked':''} data-f="consent_given" data-id="${r.id}">
         I have their written permission
@@ -449,6 +467,7 @@ async function loadResults(){
         Show on website
       </label>
 
+      <!-- 7. Save and delete -->
       <div style="display:flex;gap:10px">
         <button class="btn sm" onclick="saveResult('${r.id}')">Save</button>
         <button class="btn danger" onclick="delResult('${r.id}')">Delete</button>
