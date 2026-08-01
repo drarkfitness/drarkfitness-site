@@ -79,6 +79,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 .pill.joined{background:rgba(46,125,91,.16);color:var(--green)}
 
 .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3}
+.thumb-empty{display:flex;align-items:center;justify-content:center;color:var(--slate);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-style:dashed}
+/* draggable focal-point frame — shows any aspect ratio, drag to choose the crop */
+.focal{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.focal:active{cursor:grabbing}
+.focal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
+.focal::after{content:"Drag to reposition";position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.72);padding:4px 7px;border-radius:3px;pointer-events:none}
 .msg{padding:11px 14px;border-radius:5px;font-size:14.5px;margin-bottom:14px;display:none}
 .msg.ok{background:rgba(46,125,91,.12);color:var(--green);display:block}
 .msg.err{background:rgba(179,38,30,.1);color:var(--red);display:block}
@@ -404,6 +410,62 @@ async function uploadImage(file){
 }
 
 /* ---------- client results ---------- */
+/* one photo slot: draggable focal frame when a photo exists, upload box when not */
+function photoField(r, which){                 // which = 'before' | 'after'
+  const url = r['photo_'+which] || '';
+  const focalKey = 'focal_'+which;
+  const focal = r[focalKey] || '50% 50%';
+  const id = r.id;
+  if(url){
+    return `
+      <div class="focal" data-id="${id}">
+        <img src="${esc(url)}" style="object-position:${esc(focal)}" draggable="false" alt="">
+      </div>
+      <input type="hidden" data-f="${focalKey}" data-id="${id}" value="${esc(focal)}">
+      <input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}">`;
+  }
+  return `
+    <div class="thumb thumb-empty">No photo yet</div>
+    <input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}">`;
+}
+
+/* make a focal frame draggable — updates its hidden focal input live (saved on Save) */
+function initFocalDrag(){
+  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+  document.querySelectorAll('.focal').forEach(frame => {
+    const img = frame.querySelector('img');
+    const hidden = frame.parentNode.querySelector('input[type=hidden][data-f^="focal_"]');
+    const parts = (img.style.objectPosition || '50% 50%').split(/\s+/);
+    let px = parseFloat(parts[0]); if(isNaN(px)) px = 50;
+    let py = parseFloat(parts[1] != null ? parts[1] : parts[0]); if(isNaN(py)) py = 50;
+    let dragging = false, sx = 0, sy = 0, spx = 50, spy = 50;
+
+    const apply = () => {
+      const v = px.toFixed(1) + '% ' + py.toFixed(1) + '%';
+      img.style.objectPosition = v;
+      if(hidden) hidden.value = v;
+    };
+    const down = e => {
+      dragging = true; sx = e.clientX; sy = e.clientY; spx = px; spy = py;
+      if(frame.setPointerCapture) frame.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    };
+    const move = e => {
+      if(!dragging) return;
+      const w = frame.clientWidth || 1, h = frame.clientHeight || 1;
+      px = clamp(spx - (e.clientX - sx) / w * 100, 0, 100);
+      py = clamp(spy - (e.clientY - sy) / h * 100, 0, 100);
+      apply();
+      e.preventDefault();
+    };
+    const up = () => { dragging = false; };
+    frame.addEventListener('pointerdown', down);
+    frame.addEventListener('pointermove', move);
+    frame.addEventListener('pointerup', up);
+    frame.addEventListener('pointercancel', up);
+  });
+}
+
 async function loadResults(){
   const { data } = await sb.from('client_results').select('*').order('sort_order');
   if(!data || !data.length){ $('resList').innerHTML = '<div class="empty">No client results yet.</div>'; return; }
@@ -434,14 +496,10 @@ async function loadResults(){
 
       <!-- 4. Their photos, side by side -->
       <div class="row2">
-        <div><label>BEFORE photo</label>
-          <img class="thumb" src="${r.photo_before||''}">
-          <input type="file" accept="image/*" data-photo="photo_before" data-id="${r.id}"></div>
-        <div><label>AFTER photo</label>
-          <img class="thumb" src="${r.photo_after||''}">
-          <input type="file" accept="image/*" data-photo="photo_after" data-id="${r.id}"></div>
+        <div><label>BEFORE photo</label>${photoField(r,'before')}</div>
+        <div><label>AFTER photo</label>${photoField(r,'after')}</div>
       </div>
-      <p class="hint">Both photos should be portrait, 3:4 shape (taller than they are wide).</p>
+      <p class="hint">Any photo shape works. After uploading, drag the photo to choose the part that shows on your website, then press Save.</p>
 
       <!-- 5. Their numbers -->
       <div class="row2">
@@ -480,11 +538,17 @@ async function loadResults(){
       flash($('resMsg'),'Uploading photo...');
       try{
         const url = await uploadImage(f);
-        await sb.from('client_results').update({[e.target.dataset.photo]: url}).eq('id', e.target.dataset.id);
-        flash($('resMsg'),'Photo uploaded.'); loadResults();
+        const focalKey = e.target.dataset.photo.replace('photo_','focal_');
+        /* new photo -> reset the crop to centre so it can be repositioned fresh */
+        await sb.from('client_results')
+          .update({[e.target.dataset.photo]: url, [focalKey]: '50% 50%'})
+          .eq('id', e.target.dataset.id);
+        flash($('resMsg'),'Photo uploaded. Drag it to reposition, then press Save.'); loadResults();
       }catch(err){ flash($('resMsg'), err.message, false); }
     };
   });
+
+  initFocalDrag();
 }
 
 window.saveResult = async id => {
