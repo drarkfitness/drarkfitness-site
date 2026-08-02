@@ -133,10 +133,11 @@ header{
 }
 .hero-photo{
   width:100%;aspect-ratio:4/5;background:#EDEAE3;
-  border:1px solid var(--line);border-radius:4px;
+  border:1px solid var(--line);border-radius:4px;overflow:hidden;
   display:flex;align-items:center;justify-content:center;
   margin-bottom:30px;
 }
+.hero-photo img{transform-origin:center center}
 .ph-note{
   font-family:var(--mono);font-size:12px;letter-spacing:.08em;
   text-transform:uppercase;color:#3D465A;text-align:center;
@@ -463,7 +464,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .ba{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
 .ba-half{position:relative;aspect-ratio:3/4;background:#EDEAE3;overflow:hidden}
 .ba-half:first-child{border-right:1px solid var(--line)}
-.ba-half img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;z-index:1}
+.ba-half img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;z-index:1}
 .ba-half .ph-note{
   position:absolute;inset:8px;z-index:0;
   display:flex;align-items:center;justify-content:center;text-align:center;
@@ -515,6 +516,23 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .lightbox.open{display:flex}
 .lb-inner{width:100%;max-width:980px;aspect-ratio:16/9;background:#11182C;border-radius:6px;display:flex;align-items:center;justify-content:center}
 .lb-close{position:absolute;top:16px;right:18px;background:none;border:0;color:#fff;font-size:38px;line-height:1;cursor:pointer;padding:6px 12px}
+
+/* read-full-story button + overlay */
+.story-more{display:inline-flex;align-items:center;gap:8px;margin-top:18px;background:none;border:1px solid var(--line);color:var(--navy);font-family:var(--body);font-size:15px;font-weight:500;padding:11px 16px;border-radius:4px;cursor:pointer;transition:border-color .18s ease}
+.story-more:hover{border-color:var(--navy)}
+.story-more:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.story-more::after{content:"\2192";font-family:var(--mono)}
+.story-modal{position:fixed;inset:0;z-index:210;background:rgba(6,12,28,0.94);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.story-modal.open{display:flex}
+.story-box{position:relative;width:100%;max-width:620px;background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:6px;padding:34px 26px 30px;margin:auto}
+.story-close{position:absolute;top:10px;right:12px;background:none;border:0;color:var(--slate);font-size:34px;line-height:1;cursor:pointer;padding:4px 12px}
+.story-close:hover{color:var(--navy)}
+.story-box .story-meta{margin-bottom:12px}
+.story-box .story-quote{font-size:24px;margin-bottom:16px}
+.story-full{font-size:16.5px;line-height:1.7;color:var(--navy-soft);margin-bottom:18px;white-space:pre-line}
+.story-box .story-text{margin-bottom:18px}
+.story-box .markers{margin-top:4px}
+.story-box .marker:last-child{padding-bottom:0}
 
 /* lead form */
 .lead-form{margin-top:26px}
@@ -1137,6 +1155,13 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
   </div>
 </div>
 
+<div class="story-modal" id="storyModal" aria-hidden="true">
+  <div class="story-box" role="dialog" aria-modal="true" aria-label="Client story">
+    <button class="story-close" id="storyClose" aria-label="Close">&times;</button>
+    <div id="storyContent"></div>
+  </div>
+</div>
+
 <button class="to-top" id="toTop" aria-label="Back to top"></button>
 
 <a href="https://wa.me/923329999875" target="_blank" rel="noopener" class="wa" aria-label="Chat on WhatsApp">
@@ -1181,59 +1206,78 @@ document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
 const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
+/* ---- shared crop maths — MUST stay identical to admin.html ----
+   A photo is shown with object-fit:cover (centred) inside a fixed-ratio
+   frame, then transformed by zoom + x/y. The same three numbers produce
+   the same crop here as in the dashboard, at any frame size. */
+function cropTransform(zoom, x, y){
+  let z = parseFloat(zoom); if(!(z > 0)) z = 1;
+  let tx = parseFloat(x); if(!isFinite(tx)) tx = 0;
+  let ty = parseFloat(y); if(!isFinite(ty)) ty = 0;
+  return 'translate(' + tx + '%,' + ty + '%) scale(' + z + ')';
+}
+
+const _isUrl = u => /^(https?:\/\/|\/|data:image\/)/i.test((u||'').trim());
+
+/* one before/after frame — only render <img> for a real URL, and
+   fall back to the dashed placeholder if the URL is empty OR breaks. */
+function resultHalf(src, crop, tag, cls){
+  const url = (src||'').trim();
+  const img = _isUrl(url)
+    ? '<img src="'+_attr(url)+'" alt="'+_attr(tag)+'" loading="lazy" ' +
+      'style="transform:'+_attr(cropTransform(crop&&crop.zoom, crop&&crop.x, crop&&crop.y))+'" ' +
+      'onerror="this.remove()">'
+    : '';
+  return '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
+    '<div class="ph-note">No photo</div>' + img + '</div>';
+}
+
+/* signature marker row — kept identical to the original design */
+function resultMarker(label, s, e, unit, w, dur){
+  if(!s || !e) return '';
+  return '<div class="marker" style="--w:'+w+'">' +
+    '<div class="marker-tip">'+_txt(label)+' &nbsp;'+_txt(s)+' → '+_txt(e)+'</div>' +
+    '<div class="marker-top"><span class="marker-name">'+_txt(label)+'</span><span class="marker-span">'+_txt(dur||'')+'</span></div>' +
+    '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
+    '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
+    '<div class="marker-vals"><span class="val val-now">'+_txt(e)+' '+_txt(unit)+'<span class="val-cap">now</span></span>' +
+    '<span class="val val-was">'+_txt(s)+' '+_txt(unit)+'<span class="val-cap">start</span></span></div></div>';
+}
+
+function resultMarkers(cl){
+  return [
+    resultMarker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
+    resultMarker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
+    resultMarker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
+  ].join('');
+}
+
+function resultLine(lbl, txt){ return txt ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : ''; }
+function resultStory(cl){ return resultLine('Before', cl.before) + resultLine('What changed', cl.changed) + resultLine('Result', cl.result); }
+function resultMeta(cl){ return [cl.name, cl.age, cl.occupation, cl.duration].filter(Boolean).map(_txt).join(' · '); }
+
 function renderResults(clients){
   const box = document.getElementById('c-results');
   if(!box) return;
   const list = (clients||[]).filter(Boolean);
   if(!list.length) return;
+  window._clients = list;
 
   /* if a carousel was already built (e.g. fallback before Supabase), stop its timer */
   if(typeof window._carouselCleanup === 'function') window._carouselCleanup();
 
-  const isUrl = u => /^(https?:\/\/|\/|data:image\/)/i.test((u||'').trim());
-
-  /* one before/after frame — only render <img> for a real URL, and
-     fall back to the dashed placeholder if the URL is empty OR breaks. */
-  const half = (src, focal, tag, cls) => {
-    const url = (src||'').trim();
-    const pos = (focal||'').trim() || '50% 50%';
-    const img = isUrl(url)
-      ? '<img src="'+_attr(url)+'" alt="'+_attr(tag)+'" loading="lazy" ' +
-        'style="object-position:'+_attr(pos)+'" ' +
-        'onerror="this.remove()">'
-      : '';
-    return '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
-      '<div class="ph-note">No photo</div>' + img + '</div>';
-  };
-
-  /* signature marker row — kept identical to the original design */
-  const marker = (label, s, e, unit, w, dur) => {
-    if(!s || !e) return '';
-    return '<div class="marker" style="--w:'+w+'">' +
-      '<div class="marker-tip">'+_txt(label)+' &nbsp;'+_txt(s)+' → '+_txt(e)+'</div>' +
-      '<div class="marker-top"><span class="marker-name">'+_txt(label)+'</span><span class="marker-span">'+_txt(dur||'')+'</span></div>' +
-      '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
-      '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
-      '<div class="marker-vals"><span class="val val-now">'+_txt(e)+' '+_txt(unit)+'<span class="val-cap">now</span></span>' +
-      '<span class="val val-was">'+_txt(s)+' '+_txt(unit)+'<span class="val-cap">start</span></span></div></div>';
-  };
-
-  const line = (lbl, txt) => txt ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : '';
-
-  const slides = list.map(cl => {
-    const markers = [
-      marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
-      marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
-      marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
-    ].join('');
-    const story = line('Before', cl.before) + line('What changed', cl.changed) + line('Result', cl.result);
+  const slides = list.map((cl, idx) => {
+    const markers = resultMarkers(cl);
+    const story = resultStory(cl);
+    const hasStory = (cl.fullStory||'').trim().length > 0;
     return '<div class="car-slide">' +
-      '<div class="ba">' + half(cl.photoBefore, cl.focalBefore, 'Before', '') + half(cl.photoAfter, cl.focalAfter, 'After', 'ba-after') + '</div>' +
+      '<div class="ba">' + resultHalf(cl.photoBefore, cl.cropBefore, 'Before', '') + resultHalf(cl.photoAfter, cl.cropAfter, 'After', 'ba-after') + '</div>' +
       '<div class="car-body">' +
-        '<div class="story-meta">'+[cl.name,cl.age,cl.duration].filter(Boolean).map(_txt).join(' · ')+'</div>' +
+        '<div class="story-meta">'+resultMeta(cl)+'</div>' +
         (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
         (story ? '<p class="story-text">'+story+'</p>' : '') +
         (markers ? '<div class="markers">'+markers+'</div>' : '') +
+        (hasStory ? '<button class="story-more" type="button" onclick="openStory('+idx+')">Read full story</button>' : '') +
       '</div></div>';
   }).join('');
 
@@ -1256,6 +1300,38 @@ function renderResults(clients){
   initResultsCarousel(box.querySelector('.carousel'));
   document.querySelectorAll('.rev:not(.seen), .marker:not(.seen)').forEach(el=>io.observe(el));
 }
+
+/* ---- full-story overlay ---- */
+window.openStory = function(idx){
+  const cl = (window._clients||[])[idx];
+  const modal = document.getElementById('storyModal');
+  const holder = document.getElementById('storyContent');
+  if(!cl || !modal || !holder) return;
+  const markers = resultMarkers(cl);
+  const story = resultStory(cl);
+  holder.innerHTML =
+    (resultMeta(cl) ? '<div class="story-meta">'+resultMeta(cl)+'</div>' : '') +
+    (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+    (cl.fullStory ? '<div class="story-full">'+_txt(cl.fullStory)+'</div>' : '') +
+    (story ? '<p class="story-text">'+story+'</p>' : '') +
+    (markers ? '<div class="markers">'+markers+'</div>' : '');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('storyClose').focus();
+};
+(function(){
+  const modal = document.getElementById('storyModal');
+  if(!modal) return;
+  const close = () => {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  };
+  document.getElementById('storyClose').addEventListener('click', close);
+  modal.addEventListener('click', e => { if(e.target === modal) close(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape' && modal.classList.contains('open')) close(); });
+})();
 
 function initResultsCarousel(root){
   if(!root) return;
@@ -1360,10 +1436,11 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   /* client results — normalise then hand to the shared carousel renderer */
   if(Array.isArray(C.clients)){
     renderResults(C.clients.map(cl => ({
-      name: cl.name, age: cl.age, duration: cl.duration,
+      name: cl.name, age: cl.age, occupation: cl.occupation, duration: cl.duration,
       quote: cl.quote, before: cl.before, changed: cl.changed, result: cl.result,
+      fullStory: cl.fullStory,
       photoBefore: cl.photoBefore, photoAfter: cl.photoAfter,
-      focalBefore: cl.focalBefore, focalAfter: cl.focalAfter,
+      cropBefore: cl.cropBefore, cropAfter: cl.cropAfter,
       weightStart: cl.weightStart, weightEnd: cl.weightEnd,
       waistStart: cl.waistStart, waistEnd: cl.waistEnd,
       hba1cStart: cl.hba1cStart, hba1cEnd: cl.hba1cEnd
@@ -1418,12 +1495,12 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 
     set('c-price', c.price); set('c-price-total', c.price); set('c-price-note', c.price_note);
 
-    const photo = (id,src,alt) => {
+    const photo = (id,src,alt,crop) => {
       const el=document.getElementById(id);
-      if(el&&src) el.innerHTML='<img src="'+src+'" alt="'+alt+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;border-radius:3px">';
+      if(el&&src) el.innerHTML='<img src="'+_attr(src)+'" alt="'+_attr(alt)+'" loading="lazy" style="width:100%;height:100%;object-fit:cover;transform:'+_attr(cropTransform(crop&&crop.zoom,crop&&crop.x,crop&&crop.y))+'">';
     };
-    photo('c-photo-hero', c.photo_hero, 'Dr. Abdur Rehman Khan');
-    photo('c-photo-about', c.photo_about, 'Dr. Abdur Rehman Khan');
+    photo('c-photo-hero', c.photo_hero, 'Dr. Abdur Rehman Khan', {zoom:c.photo_hero_zoom, x:c.photo_hero_x, y:c.photo_hero_y});
+    photo('c-photo-about', c.photo_about, 'Dr. Abdur Rehman Khan', {zoom:c.photo_about_zoom, x:c.photo_about_x, y:c.photo_about_y});
 
     if(c.whatsapp_number){
       window.WA_OVERRIDE = c.whatsapp_number;
@@ -1440,10 +1517,12 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     if(rows && rows.length){
       /* map the dashboard columns to the shared shape, same fields, same order */
       renderResults(rows.map(r => ({
-        name: r.name, age: r.age, duration: r.duration,
+        name: r.name, age: r.age, occupation: r.occupation, duration: r.duration,
         quote: r.quote, before: r.before_text, changed: r.changed_text, result: r.result_text,
+        fullStory: r.full_story,
         photoBefore: r.photo_before, photoAfter: r.photo_after,
-        focalBefore: r.focal_before, focalAfter: r.focal_after,
+        cropBefore: { zoom: r.before_zoom, x: r.before_x, y: r.before_y },
+        cropAfter:  { zoom: r.after_zoom,  x: r.after_x,  y: r.after_y },
         weightStart: r.weight_start, weightEnd: r.weight_end,
         waistStart: r.waist_start, waistEnd: r.waist_end,
         hba1cStart: r.hba1c_start, hba1cEnd: r.hba1c_end
