@@ -68,6 +68,8 @@ const CONTENT = {
       name: "[First name or initials]",
       age: "[age]",
       duration: "16 weeks",
+      headline: "",        /* one strong line, in their words, e.g. "Fitter than I have been in ten years" */
+      video: "",           /* a video testimonial link (YouTube/Vimeo), or leave empty */
       quote: "[Their strongest line, exactly as they said it]",
       before: "[What they had tried before and why it did not work]",
       changed: "[The two or three main things you did differently]",
@@ -89,6 +91,8 @@ const CONTENT = {
       name: "[First name or initials]",
       age: "[age]",
       duration: "16 weeks",
+      headline: "",        /* one strong line, in their words, e.g. "Fitter than I have been in ten years" */
+      video: "",           /* a video testimonial link (YouTube/Vimeo), or leave empty */
       quote: "[Short quote in their own words]",
       before: "[Context]",
       changed: "[What you did]",
@@ -109,6 +113,8 @@ const CONTENT = {
       name: "[First name or initials]",
       age: "[age]",
       duration: "16 weeks",
+      headline: "",        /* one strong line, in their words, e.g. "Fitter than I have been in ten years" */
+      video: "",           /* a video testimonial link (YouTube/Vimeo), or leave empty */
       quote: "[Short quote in their own words]",
       before: "[Context]",
       changed: "[What you did]",
