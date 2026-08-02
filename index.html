@@ -187,47 +187,28 @@ header{
   font-family:var(--display);font-size:23px;line-height:1.35;margin:30px 0;
 }
 
-/* ---------- marker row (signature) ---------- */
-.markers{margin:26px 0}
-.marker{padding:20px 0;border-bottom:1px solid var(--line)}
+/* ---------- marker row (signature) — compact clinical readout ----------
+   One measurement per line: LABEL — start → end — change.
+   Reads left (start) to right (end) as time. No scale bar: the numbers
+   are the truth, and a bar here would imply a scale we do not have. */
+.markers{margin:22px 0 0}
+.marker{
+  display:grid;grid-template-columns:4.4em 1fr auto;gap:12px;align-items:baseline;
+  padding:11px 0;border-bottom:1px solid var(--line);font-family:var(--mono);
+}
 .marker:last-child{border-bottom:0}
-.marker-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
-.marker-name{font-family:var(--mono);font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy)}
-.marker-span{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--slate)}
-.marker-track{position:relative;height:26px}
-.marker-line{
-  position:absolute;top:12px;left:0;height:1px;width:100%;
-  background:var(--line);
+.marker-name{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);
 }
-.marker-fill{
-  position:absolute;top:12px;height:1px;background:var(--gold);
-  width:0;transition:width 1s cubic-bezier(.22,.8,.3,1);
+.marker-flow{font-size:14.5px;color:var(--slate);letter-spacing:.01em;white-space:nowrap}
+.marker-flow .to{color:var(--slate);margin:0 7px;opacity:.7}
+.marker-flow .end{color:var(--navy);font-weight:500}
+.marker-flow .unit{color:var(--slate);font-size:12px;margin-left:3px}
+.marker-delta{
+  font-size:12.5px;font-weight:500;letter-spacing:.02em;text-align:right;white-space:nowrap;
 }
-.marker{--w:62%}
-.marker.seen .marker-fill{width:var(--w,62%)}
-.dot-start,.dot-end{
-  position:absolute;top:7px;width:11px;height:11px;border-radius:50%;
-  transform:translateX(-50%);
-}
-.dot-start{border:1.5px solid var(--slate);background:var(--paper)}
-.dot-end{background:var(--green);opacity:0;transition:opacity .4s ease .8s}
-.marker.seen .dot-end{opacity:1}
-.marker-tip{display:none}
-@media (hover:hover) and (min-width:1024px){
-  .marker{position:relative}
-  .marker-tip{
-    display:block;position:absolute;top:-6px;left:50%;transform:translate(-50%,-100%);
-    background:var(--navy);color:var(--paper);padding:10px 14px;border-radius:4px;
-    font-family:var(--mono);font-size:12px;line-height:1.6;letter-spacing:.04em;
-    white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .18s ease;z-index:5;
-  }
-  .marker:hover .marker-tip{opacity:1}
-}
-.marker-vals{display:flex;justify-content:space-between;margin-top:6px}
-.val{font-family:var(--mono);font-size:19px;font-weight:500}
-.val-was{color:var(--slate);font-size:16px}
-.val-now{color:#256B4C}
-.val-cap{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--slate);display:block;margin-top:2px}
+.marker-delta.down{color:#256B4C}
+.marker-delta.up{color:var(--slate)}
 
 /* ---------- story card ---------- */
 .story{background:var(--white);border:1px solid var(--line);border-radius:4px;overflow:hidden;margin-bottom:22px}
@@ -423,8 +404,6 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 @media (prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   .rev{opacity:1;transform:none}
-  .marker-fill{width:var(--w,60%)}
-  .dot-end{opacity:1}
 }
 
 /* brand lockup */
@@ -1206,6 +1185,10 @@ document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
 const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
+/* strip any leading/trailing quote marks (straight or curly) so a stored
+   value like "great" does not render as ""great"" once we add our own. */
+const _dequote = s => (s==null?'':String(s)).trim().replace(/^[\s"“”‘’]+|[\s"“”‘’]+$/g,'');
+
 /* ---- shared crop maths — MUST stay identical to admin.html ----
    A photo is shown with object-fit:cover (centred) inside a fixed-ratio
    frame, then transformed by zoom + x/y. The same three numbers produce
@@ -1232,23 +1215,40 @@ function resultHalf(src, crop, tag, cls){
     '<div class="ph-note">No photo</div>' + img + '</div>';
 }
 
-/* signature marker row — kept identical to the original design */
-function resultMarker(label, s, e, unit, w, dur){
+/* compact marker row — one measurement per line, reading left (start)
+   to right (end) as a change over time. No scale bar; the numbers stand
+   on their own. The change chip only shows when both values are real. */
+function markerDelta(s, e, unit){
+  const a = parseFloat(String(s).replace(/[^0-9.\-]/g,''));
+  const b = parseFloat(String(e).replace(/[^0-9.\-]/g,''));
+  if(!isFinite(a) || !isFinite(b) || a === b) return '<span class="marker-delta"></span>';
+  const diff = Math.round((b - a) * 10) / 10;          // 1 dp, kills float noise
+  const down = diff < 0;
+  const mag  = String(Math.abs(diff));
+  return '<span class="marker-delta '+(down?'down':'up')+'">' +
+    (down?'−':'+') + mag + ' ' + _txt(unit) + '</span>';
+}
+
+function resultMarker(label, s, e, unit){
+  s = String(s==null?'':s).trim(); e = String(e==null?'':e).trim();
   if(!s || !e) return '';
-  return '<div class="marker" style="--w:'+w+'">' +
-    '<div class="marker-tip">'+_txt(label)+' &nbsp;'+_txt(s)+' → '+_txt(e)+'</div>' +
-    '<div class="marker-top"><span class="marker-name">'+_txt(label)+'</span><span class="marker-span">'+_txt(dur||'')+'</span></div>' +
-    '<div class="marker-track"><div class="marker-line"></div><div class="marker-fill"></div>' +
-    '<div class="dot-start" style="left:100%"></div><div class="dot-end" style="left:32%"></div></div>' +
-    '<div class="marker-vals"><span class="val val-now">'+_txt(e)+' '+_txt(unit)+'<span class="val-cap">now</span></span>' +
-    '<span class="val val-was">'+_txt(s)+' '+_txt(unit)+'<span class="val-cap">start</span></span></div></div>';
+  return '<div class="marker">' +
+    '<span class="marker-name">'+_txt(label)+'</span>' +
+    '<span class="marker-flow">' +
+      '<span class="start">'+_txt(s)+'</span>' +
+      '<span class="to">→</span>' +
+      '<span class="end">'+_txt(e)+'</span>' +
+      (unit ? '<span class="unit">'+_txt(unit)+'</span>' : '') +
+    '</span>' +
+    markerDelta(s, e, unit) +
+  '</div>';
 }
 
 function resultMarkers(cl){
   return [
-    resultMarker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
-    resultMarker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
-    resultMarker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
+    resultMarker('Weight', cl.weightStart, cl.weightEnd, cl.weightUnit || 'kg'),
+    resultMarker('Waist',  cl.waistStart,  cl.waistEnd,  cl.waistUnit  || 'in'),
+    resultMarker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%')
   ].join('');
 }
 
@@ -1274,7 +1274,7 @@ function renderResults(clients){
       '<div class="ba">' + resultHalf(cl.photoBefore, cl.cropBefore, 'Before', '') + resultHalf(cl.photoAfter, cl.cropAfter, 'After', 'ba-after') + '</div>' +
       '<div class="car-body">' +
         '<div class="story-meta">'+resultMeta(cl)+'</div>' +
-        (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+        (_dequote(cl.quote) ? '<p class="story-quote">"'+_txt(_dequote(cl.quote))+'"</p>' : '') +
         (story ? '<p class="story-text">'+story+'</p>' : '') +
         (markers ? '<div class="markers">'+markers+'</div>' : '') +
         (hasStory ? '<button class="story-more" type="button" onclick="openStory('+idx+')">Read full story</button>' : '') +
@@ -1311,7 +1311,7 @@ window.openStory = function(idx){
   const story = resultStory(cl);
   holder.innerHTML =
     (resultMeta(cl) ? '<div class="story-meta">'+resultMeta(cl)+'</div>' : '') +
-    (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+    (_dequote(cl.quote) ? '<p class="story-quote">"'+_txt(_dequote(cl.quote))+'"</p>' : '') +
     (cl.fullStory ? '<div class="story-full">'+_txt(cl.fullStory)+'</div>' : '') +
     (story ? '<p class="story-text">'+story+'</p>' : '') +
     (markers ? '<div class="markers">'+markers+'</div>' : '');
@@ -1441,8 +1441,8 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
       fullStory: cl.fullStory,
       photoBefore: cl.photoBefore, photoAfter: cl.photoAfter,
       cropBefore: cl.cropBefore, cropAfter: cl.cropAfter,
-      weightStart: cl.weightStart, weightEnd: cl.weightEnd,
-      waistStart: cl.waistStart, waistEnd: cl.waistEnd,
+      weightStart: cl.weightStart, weightEnd: cl.weightEnd, weightUnit: cl.weightUnit,
+      waistStart: cl.waistStart, waistEnd: cl.waistEnd, waistUnit: cl.waistUnit,
       hba1cStart: cl.hba1cStart, hba1cEnd: cl.hba1cEnd
     })));
   }
@@ -1523,8 +1523,8 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
         photoBefore: r.photo_before, photoAfter: r.photo_after,
         cropBefore: { zoom: r.before_zoom, x: r.before_x, y: r.before_y },
         cropAfter:  { zoom: r.after_zoom,  x: r.after_x,  y: r.after_y },
-        weightStart: r.weight_start, weightEnd: r.weight_end,
-        waistStart: r.waist_start, waistEnd: r.waist_end,
+        weightStart: r.weight_start, weightEnd: r.weight_end, weightUnit: r.weight_unit,
+        waistStart: r.waist_start, waistEnd: r.waist_end, waistUnit: r.waist_unit,
         hba1cStart: r.hba1c_start, hba1cEnd: r.hba1c_end
       })));
     }

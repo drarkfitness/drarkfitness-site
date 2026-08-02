@@ -77,8 +77,10 @@ const CONTENT = {
       /* Numbers — leave "" to hide that row */
       weightStart: "",
       weightEnd: "",
+      weightUnit: "kg",     /* "kg" or "lb" */
       waistStart: "",
       waistEnd: "",
+      waistUnit: "in",      /* "in" or "cm" */
       hba1cStart: "",
       hba1cEnd: ""
     },
@@ -95,8 +97,10 @@ const CONTENT = {
       photoAfter: "",
       weightStart: "",
       weightEnd: "",
+      weightUnit: "kg",     /* "kg" or "lb" */
       waistStart: "",
       waistEnd: "",
+      waistUnit: "in",      /* "in" or "cm" */
       hba1cStart: "",
       hba1cEnd: ""
     },
@@ -113,8 +117,10 @@ const CONTENT = {
       photoAfter: "",
       weightStart: "",
       weightEnd: "",
+      weightUnit: "kg",     /* "kg" or "lb" */
       waistStart: "",
       waistEnd: "",
+      waistUnit: "in",      /* "in" or "cm" */
       hba1cStart: "",
       hba1cEnd: ""
     }
