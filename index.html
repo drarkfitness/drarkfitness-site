@@ -511,6 +511,14 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .car-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
 .car-actions .story-more{margin-top:0}
 .video-more::after{content:"\25B6";font-size:11px}
+/* client testimonial video — cropped thumbnail, tap to play full screen.
+   The transform matches the crop set in the dashboard exactly. */
+.result-video{position:relative;display:block;width:100%;aspect-ratio:16/9;overflow:hidden;padding:0;margin-bottom:18px;border:1px solid var(--line);border-radius:4px;background:#11182C;cursor:pointer}
+.result-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;pointer-events:none}
+.result-video .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:52px;height:52px;border-radius:50%;background:rgba(13,27,62,.82);display:flex;align-items:center;justify-content:center}
+.result-video .play::after{content:"";border-left:15px solid var(--paper);border-top:10px solid transparent;border-bottom:10px solid transparent;margin-left:4px}
+.result-video .vlabel{position:absolute;left:10px;bottom:10px;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.6);padding:4px 8px;border-radius:3px}
+.result-video:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .story-modal{position:fixed;inset:0;z-index:210;background:rgba(6,12,28,0.94);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .story-modal.open{display:flex}
 .story-box{position:relative;width:100%;max-width:620px;background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:6px;padding:34px 26px 30px;margin:auto}
@@ -1247,6 +1255,9 @@ function cropTransform(zoom, x, y){
 }
 
 const _isUrl = u => /^(https?:\/\/|\/|data:image\/)/i.test((u||'').trim());
+/* a direct, playable video file (uploaded to storage) vs an embed link
+   (YouTube/Vimeo). Only direct files get a cropped thumbnail on the card. */
+const _isDirectVideo = u => /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test((u||'').trim());
 
 /* one before/after frame — only render <img> for a real URL, and
    fall back to the dashed placeholder if the URL is empty OR breaks. */
@@ -1325,14 +1336,23 @@ function renderResults(clients){
     const markers = resultMarkers(cl);
     const story = resultStory(cl);
     const hasStory = (cl.fullStory||'').trim().length > 0;
-    const hasVideo = _isUrl(cl.video);
+    const vurl = (cl.video||'').trim();
+    const hasVideo = _isUrl(vurl);
+    const directVid = _isDirectVideo(vurl);
     const headline = _dequote(cl.headline);
+    const videoBlock = (hasVideo && directVid)
+      ? '<button class="result-video" type="button" onclick="openResultVideo('+idx+')" aria-label="Play video">' +
+          '<video src="'+_attr(vurl)+'#t=0.1" muted playsinline preload="metadata" style="transform:'+_attr(cropTransform(cl.videoZoom, cl.videoX, cl.videoY))+'"></video>' +
+          '<span class="play"></span><span class="vlabel">Watch video</span>' +
+        '</button>'
+      : '';
     const actions =
-      (hasVideo ? '<button class="story-more video-more" type="button" onclick="openResultVideo('+idx+')">Watch video</button>' : '') +
+      ((hasVideo && !directVid) ? '<button class="story-more video-more" type="button" onclick="openResultVideo('+idx+')">Watch video</button>' : '') +
       (hasStory ? '<button class="story-more" type="button" onclick="openStory('+idx+')">Read full story</button>' : '');
     return '<div class="car-slide">' +
       '<div class="ba">' + resultHalf(cl.photoBefore, cl.cropBefore, 'Before', '') + resultHalf(cl.photoAfter, cl.cropAfter, 'After', 'ba-after') + '</div>' +
       '<div class="car-body">' +
+        videoBlock +
         (headline ? '<p class="result-headline">'+_txt(headline)+'</p>' : '') +
         '<div class="story-meta">'+resultMeta(cl)+'</div>' +
         (_dequote(cl.quote) ? '<p class="story-quote">"'+_txt(_dequote(cl.quote))+'"</p>' : '') +
@@ -1501,6 +1521,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
       name: cl.name, age: cl.age, occupation: cl.occupation, duration: cl.duration,
       quote: cl.quote, before: cl.before, changed: cl.changed, result: cl.result,
       headline: cl.headline, video: cl.video,
+      videoZoom: cl.videoZoom, videoX: cl.videoX, videoY: cl.videoY,
       fullStory: cl.fullStory,
       photoBefore: cl.photoBefore, photoAfter: cl.photoAfter,
       cropBefore: cl.cropBefore, cropAfter: cl.cropAfter,
@@ -1583,6 +1604,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
         name: r.name, age: r.age, occupation: r.occupation, duration: r.duration,
         quote: r.quote, before: r.before_text, changed: r.changed_text, result: r.result_text,
         headline: r.headline, video: r.video_url,
+        videoZoom: r.video_zoom, videoX: r.video_x, videoY: r.video_y,
         fullStory: r.full_story,
         photoBefore: r.photo_before, photoAfter: r.photo_after,
         cropBefore: { zoom: r.before_zoom, x: r.before_x, y: r.before_y },
@@ -1610,9 +1632,12 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
 const lb=document.getElementById('lightbox'),lbClose=document.getElementById('lbClose'),lbInner=lb.querySelector('.lb-inner');
 const lbDefault=lbInner.innerHTML;
 function openVideo(url){
-  lbInner.innerHTML = _isUrl(url)
-    ? '<iframe src="'+_attr(url)+'" title="Video" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;border-radius:6px"></iframe>'
-    : lbDefault;
+  url = (url||'').trim();
+  lbInner.innerHTML = _isDirectVideo(url)
+    ? '<video src="'+_attr(url)+'" controls autoplay playsinline style="width:100%;height:100%;background:#000;border-radius:6px"></video>'
+    : (_isUrl(url)
+      ? '<iframe src="'+_attr(url)+'" title="Video" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="width:100%;height:100%;border:0;border-radius:6px"></iframe>'
+      : lbDefault);
   lb.classList.add('open');document.body.style.overflow='hidden';
 }
 window.openResultVideo=function(idx){const cl=(window._clients||[])[idx];if(cl)openVideo(cl.video);};

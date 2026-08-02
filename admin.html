@@ -85,7 +85,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
    scroll-wheel or pinch to zoom. The maths matches index.html exactly. */
 .crop{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .crop:active{cursor:grabbing}
-.crop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;pointer-events:none;-webkit-user-drag:none}
+.crop img,.crop video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;pointer-events:none;-webkit-user-drag:none}
 .crop .crop-hint{position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.72);padding:4px 7px;border-radius:3px;pointer-events:none}
 .crop-tools{display:flex;gap:8px;margin-bottom:8px}
 .msg{padding:11px 14px;border-radius:5px;font-size:14.5px;margin-bottom:14px;display:none}
@@ -478,9 +478,13 @@ function cropTransform(zoom, x, y){
 /* how far x/y can travel (in %) before a gap shows, given the zoom.
    Depends only on the image and frame aspect ratios, so it is the same
    value the website would compute. */
+/* natural pixel size of an <img> OR a <video> */
+const mediaW = m => m.naturalWidth  || m.videoWidth  || 0;
+const mediaH = m => m.naturalHeight || m.videoHeight || 0;
+
 function cropBounds(frame, img, zoom){
   const fw = frame.clientWidth || 1, fh = frame.clientHeight || 1;
-  const iw = img.naturalWidth || fw, ih = img.naturalHeight || fh;
+  const iw = mediaW(img) || fw, ih = mediaH(img) || fh;
   const sc = Math.max(fw/iw, fh/ih);
   const coverW = iw*sc/fw, coverH = ih*sc/fh;
   return { x: Math.max(0, (coverW*zoom - 1)*50), y: Math.max(0, (coverH*zoom - 1)*50) };
@@ -490,16 +494,16 @@ const CROP_MIN = 1, CROP_MAX = 5;
 
 /* wire one crop frame. state = {zoom,x,y}; onChange fires after every edit */
 function initCrop(frame, state, onChange){
-  const img = frame.querySelector('img');
+  const img = frame.querySelector('img, video');
   const pointers = new Map();
   let pinch = null, drag = null;
 
   const apply = () => {
-    /* only clamp once the real image size AND frame size are known, otherwise
-       a not-yet-loaded image (naturalWidth 0) or a hidden frame would clamp a
-       validly-saved x/y down to zero and lose the crop. Values were already
-       clamped when first set, so applying them unclamped here is safe. */
-    if(img.naturalWidth && frame.clientWidth){
+    /* only clamp once the real media size AND frame size are known, otherwise
+       a not-yet-loaded image/video (natural size 0) or a hidden frame would
+       clamp a validly-saved x/y down to zero and lose the crop. Values were
+       already clamped when first set, so applying them unclamped here is safe. */
+    if(mediaW(img) && frame.clientWidth){
       const b = cropBounds(frame, img, state.zoom);
       state.x = clamp(state.x, -b.x, b.x);
       state.y = clamp(state.y, -b.y, b.y);
@@ -557,8 +561,11 @@ function initCrop(frame, state, onChange){
     apply();
   }, { passive:false });
 
-  /* apply now (and again once the image size is known, for clamping) */
+  /* apply now (and again once the media size is known, for clamping).
+     <img> fires 'load'; <video> fires 'loadedmetadata' / 'loadeddata'. */
   img.addEventListener('load', apply);
+  img.addEventListener('loadedmetadata', apply);
+  img.addEventListener('loadeddata', apply);
   /* re-apply when the frame gets real dimensions (e.g. a hidden tab opens)
      so bounds are always computed against the true 3:4 / 4:5 frame */
   if(window.ResizeObserver) new ResizeObserver(() => apply()).observe(frame);
@@ -590,6 +597,41 @@ function photoField(r, which){                 // which = 'before' | 'after'
   return `
     <div class="thumb thumb-empty">No photo yet</div>
     <input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}">`;
+}
+
+/* a direct, playable video file (uploaded here) vs a YouTube/Vimeo link.
+   MUST match _isDirectVideo() in index.html. Only files get a cropped frame. */
+const isDirectVideo = u => /\.(mp4|webm|ogg|ogv|mov|m4v)(\?|#|$)/i.test((u||'').trim());
+
+/* one testimonial-video slot. An uploaded file gets a WYSIWYG 16:9 crop frame
+   (drag/zoom, same maths as photos); a pasted link is stored but not cropped.
+   Empty = nothing shows on the website. */
+function videoField(r){
+  const url = (r.video_url||'').trim();
+  const id = r.id;
+  const z = r.video_zoom!=null ? r.video_zoom : 1;
+  const x = r.video_x!=null ? r.video_x : 0;
+  const y = r.video_y!=null ? r.video_y : 0;
+  const media = (url && isDirectVideo(url))
+    ? `<div class="crop" data-id="${id}" data-which="video" style="aspect-ratio:16/9">
+        <video src="${esc(url)}#t=0.1" muted playsinline preload="metadata" draggable="false"></video>
+        <span class="crop-hint">Drag · scroll or pinch to zoom</span>
+      </div>
+      <div class="crop-tools">
+        <button type="button" class="btn ghost sm" data-resetcrop="video" data-id="${id}">Reset crop</button>
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Change video<input type="file" accept="video/*" data-video="1" data-id="${id}" style="display:none"></label>
+      </div>`
+    : `<div class="thumb thumb-empty" style="aspect-ratio:16/9">${url ? 'Link video — not cropped' : 'No video yet'}</div>
+      <div class="crop-tools">
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Upload a video file<input type="file" accept="video/*" data-video="1" data-id="${id}" style="display:none"></label>
+      </div>`;
+  return `${media}
+    <label style="margin-top:6px">Or paste a video link (YouTube, Vimeo)</label>
+    <input value="${esc(url)}" data-f="video_url" data-id="${id}" placeholder="https://...">
+    <input type="hidden" data-f="video_zoom" data-id="${id}" value="${Number(z)}">
+    <input type="hidden" data-f="video_x" data-id="${id}" value="${Number(x)}">
+    <input type="hidden" data-f="video_y" data-id="${id}" value="${Number(y)}">
+    <p class="hint">Upload a video file to crop its thumbnail here — the frame is the exact shape the website uses. Or paste a YouTube/Vimeo link (links are not cropped). Leave empty for no video.</p>`;
 }
 
 /* wire every client crop frame to its hidden zoom/x/y inputs */
@@ -712,6 +754,8 @@ async function loadResults(){
         <!-- Their words -->
         <div class="rsec">
           <div class="rsec-t">Their words</div>
+          <label>Headline — one strong line, optional. Shows in bold at the top of their story.</label>
+          <input value="${esc(r.headline)}" data-f="headline" data-id="${r.id}" placeholder="e.g. Fitter than I have been in ten years">
           <label>What they said — do not add quote marks, they are added automatically.</label>
           <textarea oninput="autoGrow(this)" data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
           <label>Before — what they had tried</label>
@@ -732,6 +776,12 @@ async function loadResults(){
             <div><label>AFTER photo</label>${photoField(r,'after')}</div>
           </div>
           <p class="hint">Any photo shape works. The frame is the exact shape the website uses. Drag to move it, scroll or pinch to zoom, then press Save. What you see here is what visitors get.</p>
+        </div>
+
+        <!-- Video -->
+        <div class="rsec">
+          <div class="rsec-t">Video</div>
+          ${videoField(r)}
         </div>
 
         <!-- Numbers. Start on the left, end on the right — same as the website
@@ -801,6 +851,22 @@ async function loadResults(){
     };
   });
 
+  document.querySelectorAll('[data-video]').forEach(inp => {
+    inp.onchange = async e => {
+      const f = e.target.files[0]; if(!f) return;
+      flash($('resMsg'),'Uploading video...');
+      try{
+        const url = await uploadImage(f);   // same 'images' storage bucket as photos
+        _openId = e.target.dataset.id;
+        /* new video -> reset the thumbnail crop to centre so it can be set fresh */
+        await sb.from('client_results')
+          .update({ video_url:url, video_zoom:1, video_x:0, video_y:0 })
+          .eq('id', e.target.dataset.id);
+        flash($('resMsg'),'Video uploaded. Drag and zoom to set the thumbnail, then press Save.'); loadResults();
+      }catch(err){ flash($('resMsg'), err.message, false); }
+    };
+  });
+
   initResultCrops();
 
   /* the open card is visible now — size its textareas and apply its crops */
@@ -828,7 +894,19 @@ window.saveResult = async id => {
     flash($('resMsg'),'You cannot publish a client without their written permission.', false);
     return;
   }
-  const { error } = await sb.from('client_results').update(patch).eq('id', id);
+  let { error } = await sb.from('client_results').update(patch).eq('id', id);
+  /* graceful fallback: if the headline/video columns have not been added to
+     the database yet, still save everything else so the dashboard keeps
+     working, and say exactly what to do to switch the new fields on. */
+  if(error && /headline|video_url|video_zoom|video_x|video_y/i.test(error.message||'')){
+    ['headline','video_url','video_zoom','video_x','video_y'].forEach(k => delete patch[k]);
+    const retry = await sb.from('client_results').update(patch).eq('id', id);
+    if(!retry.error){
+      flash($('resMsg'),'Saved. To switch on the headline and video, run add-video-testimonials.sql in Supabase once.', true);
+      return;
+    }
+    error = retry.error;
+  }
   flash($('resMsg'), error ? error.message : 'Saved.', !error);
 };
 
