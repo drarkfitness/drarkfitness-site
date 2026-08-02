@@ -76,7 +76,7 @@ Otherwise Dr. ARK cannot edit it himself, which defeats the point.
 - `color-scheme: light only` is set deliberately. iOS auto-darkens pages otherwise and the site becomes unreadable. Do not remove it.
 - Almost no animation. Fade-and-rise on scroll, and the marker lines. Nothing else.
 
-**The marker row** (`.marker`) is the signature component — a horizontal line showing a client's start and end value for weight, waist or HbA1c. It is what makes the site look clinical rather than like a gym page. Keep it.
+**The marker row** (`.marker`) is the signature component — a compact single-line readout of a client's change for weight, waist or HbA1c: `LABEL — start → end unit — change`. It reads left (start) to right (end) as time. There is deliberately **no progress bar**: an earlier version drew a line whose dot positions did not map to the real numbers, which implied a scale that was not real. The numbers stand on their own. Units are per-measurement and editable (kg/lb for weight, in/cm for waist; HbA1c is always %), stored in `weight_unit` / `waist_unit`. It is what makes the site look clinical rather than like a gym page. Keep it compact and honest.
 
 ---
 

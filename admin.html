@@ -54,6 +54,7 @@ input,select,textarea{width:100%;padding:12px;font-family:var(--body);font-size:
 textarea{min-height:88px;resize:vertical}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-offset:0}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 88px;gap:0 12px}
 
 .btn{background:var(--navy);color:#fff;border:0;padding:13px 20px;border-radius:5px;font-family:var(--body);font-size:15.5px;font-weight:500;cursor:pointer}
 .btn:hover{background:#0a1531}
@@ -634,14 +635,23 @@ async function loadResults(){
       </div>
       <p class="hint">Any photo shape works. The frame is the exact shape the website uses. Drag to move it, scroll or pinch to zoom, then press Save. What you see here is what visitors get.</p>
 
-      <!-- 5. Their numbers -->
-      <div class="row2">
-        <div><label>Weight start (kg)</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
-        <div><label>Weight end (kg)</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
+      <!-- 5. Their numbers. Start on the left, end on the right — same as the
+           website reads. The unit you pick here is the unit visitors see. -->
+      <div class="row3">
+        <div><label>Weight start</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
+        <div><label>Weight end</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
+        <div><label>Unit</label>
+          <select data-f="weight_unit" data-id="${r.id}">
+            ${['kg','lb'].map(u=>`<option value="${u}" ${(r.weight_unit||'kg')===u?'selected':''}>${u}</option>`).join('')}
+          </select></div>
       </div>
-      <div class="row2">
-        <div><label>Waist start (cm)</label><input value="${esc(r.waist_start)}" data-f="waist_start" data-id="${r.id}"></div>
-        <div><label>Waist end (cm)</label><input value="${esc(r.waist_end)}" data-f="waist_end" data-id="${r.id}"></div>
+      <div class="row3">
+        <div><label>Waist start</label><input value="${esc(r.waist_start)}" data-f="waist_start" data-id="${r.id}"></div>
+        <div><label>Waist end</label><input value="${esc(r.waist_end)}" data-f="waist_end" data-id="${r.id}"></div>
+        <div><label>Unit</label>
+          <select data-f="waist_unit" data-id="${r.id}">
+            ${['in','cm'].map(u=>`<option value="${u}" ${(r.waist_unit||'in')===u?'selected':''}>${u}</option>`).join('')}
+          </select></div>
       </div>
       <div class="row2">
         <div><label>HbA1c start (%)</label><input value="${esc(r.hba1c_start)}" data-f="hba1c_start" data-id="${r.id}"></div>
