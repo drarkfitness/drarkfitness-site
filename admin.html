@@ -80,11 +80,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 
 .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3}
 .thumb-empty{display:flex;align-items:center;justify-content:center;color:var(--slate);font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;border-style:dashed}
-/* draggable focal-point frame — shows any aspect ratio, drag to choose the crop */
-.focal{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
-.focal:active{cursor:grabbing}
-.focal img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
-.focal::after{content:"Drag to reposition";position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.72);padding:4px 7px;border-radius:3px;pointer-events:none}
+/* crop frame — same aspect ratio the website uses. Drag to move,
+   scroll-wheel or pinch to zoom. The maths matches index.html exactly. */
+.crop{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;border:1px solid var(--line);border-radius:5px;margin-bottom:8px;background:#EDEAE3;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.crop:active{cursor:grabbing}
+.crop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;pointer-events:none;-webkit-user-drag:none}
+.crop .crop-hint{position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.72);padding:4px 7px;border-radius:3px;pointer-events:none}
+.crop-tools{display:flex;gap:8px;margin-bottom:8px}
 .msg{padding:11px 14px;border-radius:5px;font-size:14.5px;margin-bottom:14px;display:none}
 .msg.ok{background:rgba(46,125,91,.12);color:var(--green);display:block}
 .msg.err{background:rgba(179,38,30,.1);color:var(--red);display:block}
@@ -227,14 +229,26 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
     <div class="card">
       <h3>Your photos</h3>
       <label class="big">Your main photo — top of the homepage. Portrait, 4:5 shape.</label>
-      <img class="thumb" id="th-hero" style="aspect-ratio:4/5">
-      <input type="file" accept="image/*" id="up-hero">
-      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide).</p>
+      <div class="crop" id="crop-hero" style="aspect-ratio:4/5">
+        <img id="th-hero" draggable="false" alt="">
+        <span class="crop-hint">Drag · scroll or pinch to zoom</span>
+      </div>
+      <div class="crop-tools">
+        <button type="button" class="btn ghost sm" id="reset-hero">Reset crop</button>
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" id="up-hero" style="display:none"></label>
+      </div>
+      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide). This frame is the exact shape the website uses.</p>
 
       <label class="big" style="margin-top:6px">Your About photo — you seated or working. Portrait, 4:5 shape.</label>
-      <img class="thumb" id="th-about" style="aspect-ratio:4/5">
-      <input type="file" accept="image/*" id="up-about">
-      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide).</p>
+      <div class="crop" id="crop-about" style="aspect-ratio:4/5">
+        <img id="th-about" draggable="false" alt="">
+        <span class="crop-hint">Drag · scroll or pinch to zoom</span>
+      </div>
+      <div class="crop-tools">
+        <button type="button" class="btn ghost sm" id="reset-about">Reset crop</button>
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" id="up-about" style="display:none"></label>
+      </div>
+      <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide). This frame is the exact shape the website uses.</p>
 
       <label style="margin-top:6px">Welcome video link (YouTube)</label>
       <input id="s-video_url" placeholder="https://www.youtube.com/embed/...">
@@ -409,69 +423,184 @@ async function uploadImage(file){
   return data.publicUrl;
 }
 
+/* ============================================================
+   PHOTO CROP — shared maths with index.html.
+   A photo is shown object-fit:cover (centred) inside a fixed-ratio
+   frame, then transformed by zoom + x/y. Same three numbers = same
+   crop on the website, at any frame size. WYSIWYG.
+   ============================================================ */
+const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
+
+/* MUST stay identical to cropTransform() in index.html */
+function cropTransform(zoom, x, y){
+  let z = parseFloat(zoom); if(!(z > 0)) z = 1;
+  let tx = parseFloat(x); if(!isFinite(tx)) tx = 0;
+  let ty = parseFloat(y); if(!isFinite(ty)) ty = 0;
+  return 'translate(' + tx + '%,' + ty + '%) scale(' + z + ')';
+}
+
+/* how far x/y can travel (in %) before a gap shows, given the zoom.
+   Depends only on the image and frame aspect ratios, so it is the same
+   value the website would compute. */
+function cropBounds(frame, img, zoom){
+  const fw = frame.clientWidth || 1, fh = frame.clientHeight || 1;
+  const iw = img.naturalWidth || fw, ih = img.naturalHeight || fh;
+  const sc = Math.max(fw/iw, fh/ih);
+  const coverW = iw*sc/fw, coverH = ih*sc/fh;
+  return { x: Math.max(0, (coverW*zoom - 1)*50), y: Math.max(0, (coverH*zoom - 1)*50) };
+}
+
+const CROP_MIN = 1, CROP_MAX = 5;
+
+/* wire one crop frame. state = {zoom,x,y}; onChange fires after every edit */
+function initCrop(frame, state, onChange){
+  const img = frame.querySelector('img');
+  const pointers = new Map();
+  let pinch = null, drag = null;
+
+  const apply = () => {
+    /* only clamp once the real image size AND frame size are known, otherwise
+       a not-yet-loaded image (naturalWidth 0) or a hidden frame would clamp a
+       validly-saved x/y down to zero and lose the crop. Values were already
+       clamped when first set, so applying them unclamped here is safe. */
+    if(img.naturalWidth && frame.clientWidth){
+      const b = cropBounds(frame, img, state.zoom);
+      state.x = clamp(state.x, -b.x, b.x);
+      state.y = clamp(state.y, -b.y, b.y);
+    }
+    img.style.transform = cropTransform(state.zoom, state.x, state.y);
+    if(onChange) onChange(state);
+  };
+  frame._cropApply = apply;
+
+  const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
+
+  frame.addEventListener('pointerdown', e => {
+    frame.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if(pointers.size === 1){
+      drag = { sx:e.clientX, sy:e.clientY, ox:state.x, oy:state.y };
+    } else if(pointers.size === 2){
+      drag = null;
+      const p = [...pointers.values()];
+      pinch = { d:dist(p[0],p[1]), zoom:state.zoom };
+    }
+    e.preventDefault();
+  });
+  frame.addEventListener('pointermove', e => {
+    if(!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    const p = [...pointers.values()];
+    if(pointers.size >= 2 && pinch){
+      state.zoom = clamp(pinch.zoom * dist(p[0],p[1]) / (pinch.d||1), CROP_MIN, CROP_MAX);
+      apply();
+    } else if(drag && pointers.size === 1){
+      const fw = frame.clientWidth || 1, fh = frame.clientHeight || 1;
+      state.x = drag.ox + (e.clientX - drag.sx) / fw * 100;
+      state.y = drag.oy + (e.clientY - drag.sy) / fh * 100;
+      apply();
+    }
+    e.preventDefault();
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    pinch = null;
+    if(pointers.size === 1){
+      const p = [...pointers.values()][0];
+      drag = { sx:p.x, sy:p.y, ox:state.x, oy:state.y };
+    } else if(pointers.size === 0){
+      drag = null;
+    }
+  };
+  frame.addEventListener('pointerup', release);
+  frame.addEventListener('pointercancel', release);
+
+  frame.addEventListener('wheel', e => {
+    e.preventDefault();
+    state.zoom = clamp(state.zoom * Math.exp(-e.deltaY * 0.0015), CROP_MIN, CROP_MAX);
+    apply();
+  }, { passive:false });
+
+  /* apply now (and again once the image size is known, for clamping) */
+  img.addEventListener('load', apply);
+  /* re-apply when the frame gets real dimensions (e.g. a hidden tab opens)
+     so bounds are always computed against the true 3:4 / 4:5 frame */
+  if(window.ResizeObserver) new ResizeObserver(() => apply()).observe(frame);
+  apply();
+}
+
 /* ---------- client results ---------- */
-/* one photo slot: draggable focal frame when a photo exists, upload box when not */
+/* one photo slot: WYSIWYG crop frame when a photo exists, upload box when not */
 function photoField(r, which){                 // which = 'before' | 'after'
   const url = r['photo_'+which] || '';
-  const focalKey = 'focal_'+which;
-  const focal = r[focalKey] || '50% 50%';
   const id = r.id;
+  const z = r[which+'_zoom']!=null ? r[which+'_zoom'] : 1;
+  const x = r[which+'_x']!=null ? r[which+'_x'] : 0;
+  const y = r[which+'_y']!=null ? r[which+'_y'] : 0;
   if(url){
     return `
-      <div class="focal" data-id="${id}">
-        <img src="${esc(url)}" style="object-position:${esc(focal)}" draggable="false" alt="">
+      <div class="crop" data-id="${id}" data-which="${which}">
+        <img src="${esc(url)}" draggable="false" alt="">
+        <span class="crop-hint">Drag · scroll or pinch to zoom</span>
       </div>
-      <input type="hidden" data-f="${focalKey}" data-id="${id}" value="${esc(focal)}">
-      <input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}">`;
+      <div class="crop-tools">
+        <button type="button" class="btn ghost sm" data-resetcrop="${which}" data-id="${id}">Reset crop</button>
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}" style="display:none"></label>
+      </div>
+      <input type="hidden" data-f="${which}_zoom" data-id="${id}" value="${Number(z)}">
+      <input type="hidden" data-f="${which}_x" data-id="${id}" value="${Number(x)}">
+      <input type="hidden" data-f="${which}_y" data-id="${id}" value="${Number(y)}">`;
   }
   return `
     <div class="thumb thumb-empty">No photo yet</div>
     <input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}">`;
 }
 
-/* make a focal frame draggable — updates its hidden focal input live (saved on Save) */
-function initFocalDrag(){
-  const clamp = (v,lo,hi) => Math.max(lo, Math.min(hi, v));
-  document.querySelectorAll('.focal').forEach(frame => {
-    const img = frame.querySelector('img');
-    const hidden = frame.parentNode.querySelector('input[type=hidden][data-f^="focal_"]');
-    const parts = (img.style.objectPosition || '50% 50%').split(/\s+/);
-    let px = parseFloat(parts[0]); if(isNaN(px)) px = 50;
-    let py = parseFloat(parts[1] != null ? parts[1] : parts[0]); if(isNaN(py)) py = 50;
-    let dragging = false, sx = 0, sy = 0, spx = 50, spy = 50;
-
-    const apply = () => {
-      const v = px.toFixed(1) + '% ' + py.toFixed(1) + '%';
-      img.style.objectPosition = v;
-      if(hidden) hidden.value = v;
+/* wire every client crop frame to its hidden zoom/x/y inputs */
+function initResultCrops(){
+  document.querySelectorAll('.crop[data-which]').forEach(frame => {
+    const id = frame.dataset.id, which = frame.dataset.which;
+    const get = f => document.querySelector(`input[type=hidden][data-f="${f}"][data-id="${id}"]`);
+    const zEl = get(which+'_zoom'), xEl = get(which+'_x'), yEl = get(which+'_y');
+    const state = {
+      zoom: parseFloat(zEl && zEl.value) || 1,
+      x: parseFloat(xEl && xEl.value) || 0,
+      y: parseFloat(yEl && yEl.value) || 0
     };
-    const down = e => {
-      dragging = true; sx = e.clientX; sy = e.clientY; spx = px; spy = py;
-      if(frame.setPointerCapture) frame.setPointerCapture(e.pointerId);
-      e.preventDefault();
+    initCrop(frame, state, s => {
+      if(zEl) zEl.value = s.zoom.toFixed(3);
+      if(xEl) xEl.value = s.x.toFixed(2);
+      if(yEl) yEl.value = s.y.toFixed(2);
+    });
+    frame._cropState = state;
+  });
+  /* Reset crop buttons */
+  document.querySelectorAll('[data-resetcrop]').forEach(btn => {
+    btn.onclick = () => {
+      const frame = document.querySelector(`.crop[data-id="${btn.dataset.id}"][data-which="${btn.dataset.resetcrop}"]`);
+      if(!frame || !frame._cropState) return;
+      frame._cropState.zoom = 1; frame._cropState.x = 0; frame._cropState.y = 0;
+      if(frame._cropApply) frame._cropApply();
     };
-    const move = e => {
-      if(!dragging) return;
-      const w = frame.clientWidth || 1, h = frame.clientHeight || 1;
-      px = clamp(spx - (e.clientX - sx) / w * 100, 0, 100);
-      py = clamp(spy - (e.clientY - sy) / h * 100, 0, 100);
-      apply();
-      e.preventDefault();
-    };
-    const up = () => { dragging = false; };
-    frame.addEventListener('pointerdown', down);
-    frame.addEventListener('pointermove', move);
-    frame.addEventListener('pointerup', up);
-    frame.addEventListener('pointercancel', up);
   });
 }
 
 async function loadResults(){
   const { data } = await sb.from('client_results').select('*').order('sort_order');
   if(!data || !data.length){ $('resList').innerHTML = '<div class="empty">No client results yet.</div>'; return; }
+  window._results = data;
 
-  $('resList').innerHTML = data.map(r => `
+  $('resList').innerHTML = data.map((r, idx) => `
     <div class="card">
+
+      <!-- 0. Order on the website -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)">
+        <span style="font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate)">Position ${idx+1} of ${data.length}</span>
+        <span style="display:flex;gap:6px">
+          <button class="btn ghost sm" onclick="moveResult('${r.id}',-1)" ${idx===0?'disabled':''} aria-label="Move up" title="Move up">↑</button>
+          <button class="btn ghost sm" onclick="moveResult('${r.id}',1)" ${idx===data.length-1?'disabled':''} aria-label="Move down" title="Move down">↓</button>
+        </span>
+      </div>
 
       <!-- 1. Who they are -->
       <div class="row2">
@@ -485,6 +614,8 @@ async function loadResults(){
             ${['fat_loss','muscle','pcos','blood_sugar','glp1'].map(c=>`<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ')}</option>`).join('')}
           </select></div>
       </div>
+      <label>Occupation — optional, short, e.g. "Doctor", "Teacher"</label>
+      <input value="${esc(r.occupation)}" data-f="occupation" data-id="${r.id}">
 
       <!-- 2. Their quote -->
       <label>What they said, in their own words</label><textarea data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
@@ -493,13 +624,15 @@ async function loadResults(){
       <label>Before — what they had tried</label><textarea data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
       <label>What changed</label><textarea data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
       <label>Result</label><textarea data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
+      <label>Full story — optional. If you write here, a "Read full story" button shows on your website.</label>
+      <textarea data-f="full_story" data-id="${r.id}">${esc(r.full_story)}</textarea>
 
       <!-- 4. Their photos, side by side -->
       <div class="row2">
         <div><label>BEFORE photo</label>${photoField(r,'before')}</div>
         <div><label>AFTER photo</label>${photoField(r,'after')}</div>
       </div>
-      <p class="hint">Any photo shape works. After uploading, drag the photo to choose the part that shows on your website, then press Save.</p>
+      <p class="hint">Any photo shape works. The frame is the exact shape the website uses. Drag to move it, scroll or pinch to zoom, then press Save. What you see here is what visitors get.</p>
 
       <!-- 5. Their numbers -->
       <div class="row2">
@@ -538,18 +671,30 @@ async function loadResults(){
       flash($('resMsg'),'Uploading photo...');
       try{
         const url = await uploadImage(f);
-        const focalKey = e.target.dataset.photo.replace('photo_','focal_');
-        /* new photo -> reset the crop to centre so it can be repositioned fresh */
+        const which = e.target.dataset.photo.replace('photo_','');   // 'before' | 'after'
+        /* new photo -> reset the crop to centre so it can be set fresh */
         await sb.from('client_results')
-          .update({[e.target.dataset.photo]: url, [focalKey]: '50% 50%'})
+          .update({[e.target.dataset.photo]: url, [which+'_zoom']:1, [which+'_x']:0, [which+'_y']:0})
           .eq('id', e.target.dataset.id);
-        flash($('resMsg'),'Photo uploaded. Drag it to reposition, then press Save.'); loadResults();
+        flash($('resMsg'),'Photo uploaded. Drag and zoom to set the crop, then press Save.'); loadResults();
       }catch(err){ flash($('resMsg'), err.message, false); }
     };
   });
 
-  initFocalDrag();
+  initResultCrops();
 }
+
+/* ---------- reorder clients (up / down) ---------- */
+window.moveResult = async (id, dir) => {
+  const arr = (window._results || []).slice();
+  const i = arr.findIndex(r => r.id === id);
+  const j = i + dir;
+  if(i < 0 || j < 0 || j >= arr.length) return;
+  const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  /* rewrite every row's sort_order to its new index so the order is stable */
+  await Promise.all(arr.map((r, k) => sb.from('client_results').update({ sort_order:k }).eq('id', r.id)));
+  loadResults();
+};
 
 window.saveResult = async id => {
   const patch = {};
@@ -571,7 +716,10 @@ window.delResult = async id => {
 };
 
 $('addRes').onclick = async () => {
-  await sb.from('client_results').insert({ name:'New client', duration:'16 weeks', sort_order:99 });
+  /* new clients go at the END by default */
+  const { data } = await sb.from('client_results').select('sort_order').order('sort_order',{ascending:false}).limit(1);
+  const next = (data && data[0] && data[0].sort_order!=null) ? (+data[0].sort_order + 1) : 0;
+  await sb.from('client_results').insert({ name:'New client', duration:'16 weeks', sort_order:next });
   loadResults();
 };
 
@@ -613,12 +761,34 @@ $('addFaq').onclick = async () => {
 /* ---------- settings ---------- */
 const KEYS = ['price','price_note','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
 
+/* crop state for Dr. ARK's own two photos, kept in site_content keys */
+const heroCrop  = { zoom:1, x:0, y:0 };
+const aboutCrop = { zoom:1, x:0, y:0 };
+let _settingsCropsInit = false;
+function initSettingsCrops(){
+  if(_settingsCropsInit) return;
+  _settingsCropsInit = true;
+  initCrop($('crop-hero'),  heroCrop);
+  initCrop($('crop-about'), aboutCrop);
+  $('reset-hero').onclick  = () => { heroCrop.zoom=1;  heroCrop.x=0;  heroCrop.y=0;  $('crop-hero')._cropApply(); };
+  $('reset-about').onclick = () => { aboutCrop.zoom=1; aboutCrop.x=0; aboutCrop.y=0; $('crop-about')._cropApply(); };
+}
+
 async function loadSettings(){
   const { data } = await sb.from('site_content').select('*');
   const map = {}; (data||[]).forEach(r => map[r.key]=r.value);
   KEYS.forEach(k => { const el=$('s-'+k); if(el) el.value = map[k]||''; });
   $('th-hero').src  = map.photo_hero  || '';
   $('th-about').src = map.photo_about || '';
+  heroCrop.zoom  = parseFloat(map.photo_hero_zoom)  || 1;
+  heroCrop.x     = parseFloat(map.photo_hero_x)     || 0;
+  heroCrop.y     = parseFloat(map.photo_hero_y)     || 0;
+  aboutCrop.zoom = parseFloat(map.photo_about_zoom) || 1;
+  aboutCrop.x    = parseFloat(map.photo_about_x)    || 0;
+  aboutCrop.y    = parseFloat(map.photo_about_y)    || 0;
+  initSettingsCrops();
+  $('crop-hero')._cropApply();
+  $('crop-about')._cropApply();
   window._content = map;
 }
 
@@ -628,15 +798,34 @@ async function loadSettings(){
     flash($('setMsg'),'Uploading...');
     try{
       const url = await uploadImage(f);
-      await sb.from('site_content').upsert({ key:'photo_'+which, value:url, updated_at:new Date().toISOString() });
+      const now = new Date().toISOString();
+      /* new photo -> reset the crop to centre */
+      await sb.from('site_content').upsert([
+        { key:'photo_'+which,        value:url, updated_at:now },
+        { key:'photo_'+which+'_zoom', value:'1', updated_at:now },
+        { key:'photo_'+which+'_x',    value:'0', updated_at:now },
+        { key:'photo_'+which+'_y',    value:'0', updated_at:now }
+      ]);
+      const st = which==='hero' ? heroCrop : aboutCrop;
+      st.zoom=1; st.x=0; st.y=0;
       $('th-'+which).src = url;
-      flash($('setMsg'),'Photo uploaded and live on your website.');
+      $('crop-'+which)._cropApply();
+      flash($('setMsg'),'Photo uploaded. Drag and zoom to set the crop, then press Save changes.');
     }catch(err){ flash($('setMsg'), err.message, false); }
   };
 });
 
 $('saveSet').onclick = async () => {
-  const rows = KEYS.filter(k=>$('s-'+k)).map(k => ({ key:k, value:$('s-'+k).value, updated_at:new Date().toISOString() }));
+  const now = new Date().toISOString();
+  const rows = KEYS.filter(k=>$('s-'+k)).map(k => ({ key:k, value:$('s-'+k).value, updated_at:now }));
+  rows.push(
+    { key:'photo_hero_zoom',  value:String(heroCrop.zoom),  updated_at:now },
+    { key:'photo_hero_x',     value:String(heroCrop.x),     updated_at:now },
+    { key:'photo_hero_y',     value:String(heroCrop.y),     updated_at:now },
+    { key:'photo_about_zoom', value:String(aboutCrop.zoom), updated_at:now },
+    { key:'photo_about_x',    value:String(aboutCrop.x),    updated_at:now },
+    { key:'photo_about_y',    value:String(aboutCrop.y),    updated_at:now }
+  );
   const { error } = await sb.from('site_content').upsert(rows);
   flash($('setMsg'), error ? error.message : 'Saved. Your website is updated.', !error);
 };
