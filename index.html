@@ -461,6 +461,8 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 
 /* before / after */
 .ba{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line)}
+.ba-single{grid-template-columns:minmax(0,210px);justify-content:center}
+.ba-single .ba-half{border-right:0}
 .ba-half{position:relative;aspect-ratio:3/4;background:#EDEAE3;overflow:hidden}
 .ba-half:first-child{border-right:1px solid var(--line)}
 .ba-half img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;z-index:1}
@@ -477,11 +479,19 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .car-viewport{overflow:hidden;border:1px solid var(--line);border-radius:4px;background:var(--white);touch-action:pan-y}
 .car-track{display:flex;transition:transform .5s cubic-bezier(.22,.8,.3,1)}
 .car-slide{flex:0 0 100%;width:100%;min-width:0}
-.car-body{padding:24px 22px 26px}
-.car-body .story-meta{margin-bottom:14px}
-.car-body .markers{margin-bottom:0}
-.car-body .marker:last-child{padding-bottom:0}
-.car-controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:22px}
+/* compact body — kept short so a full slide fits one phone screen */
+.car-body{padding:16px 18px 18px;text-align:center}
+.car-body .story-meta{margin-bottom:8px}
+.car-body .story-quote{font-size:20px;line-height:1.3;margin-bottom:0}
+.story-more{
+  margin-top:16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--navy);background:none;
+  border:1px solid var(--line);border-radius:4px;padding:12px 18px;min-height:44px;
+  cursor:pointer;transition:border-color .18s ease,background .18s ease;
+}
+.story-more:hover{border-color:var(--navy);background:var(--paper)}
+.story-more:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.car-controls{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:18px}
 .car-arrow{
   display:none;width:44px;height:44px;flex:none;
   align-items:center;justify-content:center;
@@ -506,6 +516,29 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 @media (min-width:700px){
   .car-arrow{display:flex}
 }
+
+/* ---------- full-story overlay ---------- */
+.result-modal{
+  position:fixed;inset:0;z-index:300;background:rgba(6,12,28,0.9);
+  display:none;align-items:flex-start;justify-content:center;
+  padding:20px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+}
+.result-modal.open{display:flex}
+.sm-card{
+  position:relative;background:var(--white);border-radius:4px;
+  max-width:600px;width:100%;margin:auto;padding:42px 24px 30px;
+}
+.sm-close{
+  position:absolute;top:6px;right:8px;background:none;border:0;
+  font-size:34px;line-height:1;color:var(--slate);cursor:pointer;padding:6px 12px;
+}
+.sm-close:hover{color:var(--navy)}
+.sm-close:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+.sm-card .story-meta{margin-bottom:12px}
+.sm-card .story-quote{font-size:23px;margin-bottom:16px}
+.sm-story{font-size:16.5px;color:var(--navy-soft);white-space:pre-line;margin-bottom:18px}
+.sm-card .story-text{margin-bottom:0}
+.sm-card .markers{margin-top:22px;margin-bottom:0}
 
 /* video button + lightbox */
 .video-slot{position:relative;width:100%;aspect-ratio:16/9;background:#EDEAE3;border:1px solid var(--line);border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
@@ -1181,6 +1214,8 @@ document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
 const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
+const _has = v => v != null && String(v).trim() !== '';
+
 function renderResults(clients){
   const box = document.getElementById('c-results');
   if(!box) return;
@@ -1192,23 +1227,32 @@ function renderResults(clients){
 
   const isUrl = u => /^(https?:\/\/|\/|data:image\/)/i.test((u||'').trim());
 
-  /* one before/after frame — only render <img> for a real URL, and
-     fall back to the dashed placeholder if the URL is empty OR breaks. */
+  /* one before/after frame — only rendered when a photo URL is present.
+     A real URL that breaks falls back to the dashed placeholder via onerror. */
   const half = (src, focal, tag, cls) => {
-    const url = (src||'').trim();
+    const url = String(src).trim();
     const pos = (focal||'').trim() || '50% 50%';
-    const img = isUrl(url)
-      ? '<img src="'+_attr(url)+'" alt="'+_attr(tag)+'" loading="lazy" ' +
-        'style="object-position:'+_attr(pos)+'" ' +
-        'onerror="this.remove()">'
-      : '';
     return '<div class="ba-half"><span class="ba-tag '+cls+'">'+tag+'</span>' +
-      '<div class="ph-note">No photo</div>' + img + '</div>';
+      '<div class="ph-note">No photo</div>' +
+      (isUrl(url)
+        ? '<img src="'+_attr(url)+'" alt="'+_attr(tag)+'" loading="lazy" ' +
+          'style="object-position:'+_attr(pos)+'" onerror="this.remove()">'
+        : '') +
+      '</div>';
+  };
+
+  /* photo row: nothing if no photos, one centred frame if only one, side by side if both */
+  const photoRow = cl => {
+    const halves = [];
+    if(_has(cl.photoBefore)) halves.push(half(cl.photoBefore, cl.focalBefore, 'Before', ''));
+    if(_has(cl.photoAfter))  halves.push(half(cl.photoAfter,  cl.focalAfter,  'After',  'ba-after'));
+    if(!halves.length) return '';
+    return '<div class="ba'+(halves.length === 1 ? ' ba-single' : '')+'">'+halves.join('')+'</div>';
   };
 
   /* signature marker row — kept identical to the original design */
   const marker = (label, s, e, unit, w, dur) => {
-    if(!s || !e) return '';
+    if(!_has(s) || !_has(e)) return '';
     return '<div class="marker" style="--w:'+w+'">' +
       '<div class="marker-tip">'+_txt(label)+' &nbsp;'+_txt(s)+' → '+_txt(e)+'</div>' +
       '<div class="marker-top"><span class="marker-name">'+_txt(label)+'</span><span class="marker-span">'+_txt(dur||'')+'</span></div>' +
@@ -1218,22 +1262,23 @@ function renderResults(clients){
       '<span class="val val-was">'+_txt(s)+' '+_txt(unit)+'<span class="val-cap">start</span></span></div></div>';
   };
 
-  const line = (lbl, txt) => txt ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : '';
+  const line     = (lbl, txt) => _has(txt) ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : '';
+  const metaOf   = cl => [cl.name, cl.age, cl.occupation].filter(_has).map(_txt).join(' · ');
+  const markersOf = cl => [
+    marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
+    marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
+    marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
+  ].join('');
 
-  const slides = list.map(cl => {
-    const markers = [
-      marker('Weight', cl.weightStart, cl.weightEnd, 'kg', '58%', cl.duration),
-      marker('Waist',  cl.waistStart,  cl.waistEnd,  'cm', '72%', cl.duration),
-      marker('HbA1c',  cl.hba1cStart,  cl.hba1cEnd,  '%',  '64%', cl.duration)
-    ].join('');
-    const story = line('Before', cl.before) + line('What changed', cl.changed) + line('Result', cl.result);
+  /* ---- compact slide: photos + name/age/occupation + short quote + optional button ---- */
+  const slides = list.map((cl, idx) => {
+    const meta = metaOf(cl);
     return '<div class="car-slide">' +
-      '<div class="ba">' + half(cl.photoBefore, cl.focalBefore, 'Before', '') + half(cl.photoAfter, cl.focalAfter, 'After', 'ba-after') + '</div>' +
+      photoRow(cl) +
       '<div class="car-body">' +
-        '<div class="story-meta">'+[cl.name,cl.age,cl.duration].filter(Boolean).map(_txt).join(' · ')+'</div>' +
-        (cl.quote ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
-        (story ? '<p class="story-text">'+story+'</p>' : '') +
-        (markers ? '<div class="markers">'+markers+'</div>' : '') +
+        (meta ? '<div class="story-meta">'+meta+'</div>' : '') +
+        (_has(cl.quote) ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+        (_has(cl.fullStory) ? '<button class="story-more" type="button" data-story="'+idx+'">Read full story</button>' : '') +
       '</div></div>';
   }).join('');
 
@@ -1252,6 +1297,47 @@ function renderResults(clients){
       '<div class="car-viewport"><div class="car-track">'+slides+'</div></div>' +
       controls +
     '</div>';
+
+  /* ---- full-story overlay (built once, reused) ---- */
+  let modal = document.getElementById('storyModal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'storyModal';
+    modal.className = 'result-modal';
+    modal.setAttribute('role','dialog');
+    modal.setAttribute('aria-modal','true');
+    modal.setAttribute('aria-label','Client full story');
+    modal.innerHTML = '<div class="sm-card"><button class="sm-close" type="button" aria-label="Close">&times;</button><div class="sm-content"></div></div>';
+    document.body.appendChild(modal);
+    const close = () => { modal.classList.remove('open'); document.body.style.overflow = ''; };
+    modal.querySelector('.sm-close').addEventListener('click', close);
+    modal.addEventListener('click', e => { if(e.target === modal) close(); });
+    document.addEventListener('keydown', e => { if(e.key === 'Escape' && modal.classList.contains('open')) close(); });
+  }
+
+  const openStory = cl => {
+    const meta = metaOf(cl);
+    const markers = markersOf(cl);
+    const story = line('Before', cl.before) + line('What changed', cl.changed) + line('Result', cl.result);
+    modal.querySelector('.sm-content').innerHTML =
+      (meta ? '<div class="story-meta">'+meta+'</div>' : '') +
+      (_has(cl.quote) ? '<p class="story-quote">"'+_txt(cl.quote)+'"</p>' : '') +
+      (_has(cl.fullStory) ? '<p class="sm-story">'+_txt(cl.fullStory)+'</p>' : '') +
+      (story ? '<p class="story-text">'+story+'</p>' : '') +
+      (markers ? '<div class="markers">'+markers+'</div>' : '');
+    modal.querySelectorAll('.marker').forEach(m => m.classList.add('seen'));
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    modal.querySelector('.sm-close').focus();
+  };
+
+  /* open the overlay from a slide's "Read full story" button */
+  box.onclick = e => {
+    const btn = e.target.closest('.story-more');
+    if(!btn) return;
+    const cl = list[+btn.dataset.story];
+    if(cl) openStory(cl);
+  };
 
   initResultsCarousel(box.querySelector('.carousel'));
   document.querySelectorAll('.rev:not(.seen), .marker:not(.seen)').forEach(el=>io.observe(el));
@@ -1360,8 +1446,9 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   /* client results — normalise then hand to the shared carousel renderer */
   if(Array.isArray(C.clients)){
     renderResults(C.clients.map(cl => ({
-      name: cl.name, age: cl.age, duration: cl.duration,
-      quote: cl.quote, before: cl.before, changed: cl.changed, result: cl.result,
+      name: cl.name, age: cl.age, occupation: cl.occupation, duration: cl.duration,
+      quote: cl.quote, fullStory: cl.fullStory,
+      before: cl.before, changed: cl.changed, result: cl.result,
       photoBefore: cl.photoBefore, photoAfter: cl.photoAfter,
       focalBefore: cl.focalBefore, focalAfter: cl.focalAfter,
       weightStart: cl.weightStart, weightEnd: cl.weightEnd,
@@ -1440,8 +1527,9 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     if(rows && rows.length){
       /* map the dashboard columns to the shared shape, same fields, same order */
       renderResults(rows.map(r => ({
-        name: r.name, age: r.age, duration: r.duration,
-        quote: r.quote, before: r.before_text, changed: r.changed_text, result: r.result_text,
+        name: r.name, age: r.age, occupation: r.occupation, duration: r.duration,
+        quote: r.quote, fullStory: r.full_story,
+        before: r.before_text, changed: r.changed_text, result: r.result_text,
         photoBefore: r.photo_before, photoAfter: r.photo_after,
         focalBefore: r.focal_before, focalAfter: r.focal_after,
         weightStart: r.weight_start, weightEnd: r.weight_end,

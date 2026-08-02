@@ -258,10 +258,13 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => (s||'').toString().replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
-const flash = (el, text, ok=true) => {
+const flash = (el, text, ok=true, ms=3500) => {
   el.textContent = text; el.className = 'msg ' + (ok?'ok':'err');
-  setTimeout(()=>{ el.className='msg'; }, 3500);
+  if(el._t) clearTimeout(el._t);
+  if(ms) el._t = setTimeout(()=>{ el.className='msg'; }, ms);
 };
+/* pull a readable message out of any Supabase / JS error shape */
+const errMsg = e => (e && (e.message || e.error_description || e.error || e.hint)) || (typeof e === 'string' ? e : JSON.stringify(e));
 
 /* ---------- auth ---------- */
 async function boot(){
@@ -403,10 +406,17 @@ window.setStatus = async (id, status) => {
 /* ---------- image upload ---------- */
 async function uploadImage(file){
   const name = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.]/g,'-').toLowerCase();
-  const { error } = await sb.storage.from('images').upload(name, file, { upsert:true });
-  if(error) throw error;
+  console.log('[upload] uploading', name, file.type, file.size + ' bytes');
+  const { data: upData, error: upErr } = await sb.storage.from('images')
+    .upload(name, file, { upsert:true, contentType: file.type || undefined });
+  if(upErr){ console.error('[upload] storage.upload failed:', upErr); throw upErr; }
+  console.log('[upload] stored at', upData && upData.path);
+
   const { data } = sb.storage.from('images').getPublicUrl(name);
-  return data.publicUrl;
+  const url = data && data.publicUrl;
+  console.log('[upload] getPublicUrl ->', url);
+  if(!url) throw new Error('The file uploaded but no public URL came back. Make sure the "images" bucket is set to Public in Supabase → Storage.');
+  return url;
 }
 
 /* ---------- client results ---------- */
@@ -478,6 +488,9 @@ async function loadResults(){
         <div><label>Their name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
         <div><label>Their age</label><input value="${esc(r.age)}" data-f="age" data-id="${r.id}"></div>
       </div>
+      <label>Their occupation <span style="text-transform:none;letter-spacing:0;color:var(--slate)">(optional)</span></label>
+      <input value="${esc(r.occupation)}" data-f="occupation" data-id="${r.id}" placeholder="e.g. Doctor, Teacher, Banker">
+      <p class="hint">Every field on this card is optional. Anything you leave blank simply will not appear on the website.</p>
       <div class="row2">
         <div><label>How many weeks</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
         <div><label>Category</label>
@@ -493,6 +506,10 @@ async function loadResults(){
       <label>Before — what they had tried</label><textarea data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
       <label>What changed</label><textarea data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
       <label>Result</label><textarea data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
+
+      <!-- 3b. Full story (optional) -->
+      <label>Full story <span style="text-transform:none;letter-spacing:0;color:var(--slate)">(optional)</span></label>
+      <textarea data-f="full_story" data-id="${r.id}" style="min-height:130px" placeholder="Their longer story in your own words. If you fill this in, a &quot;Read full story&quot; button appears under this client on the website.">${esc(r.full_story)}</textarea>
 
       <!-- 4. Their photos, side by side -->
       <div class="row2">
@@ -540,11 +557,15 @@ async function loadResults(){
         const url = await uploadImage(f);
         const focalKey = e.target.dataset.photo.replace('photo_','focal_');
         /* new photo -> reset the crop to centre so it can be repositioned fresh */
-        await sb.from('client_results')
+        const { error: dbErr } = await sb.from('client_results')
           .update({[e.target.dataset.photo]: url, [focalKey]: '50% 50%'})
           .eq('id', e.target.dataset.id);
+        if(dbErr){ console.error('[client photo] db update failed:', dbErr); throw dbErr; }
         flash($('resMsg'),'Photo uploaded. Drag it to reposition, then press Save.'); loadResults();
-      }catch(err){ flash($('resMsg'), err.message, false); }
+      }catch(err){
+        console.error('[client photo] upload error:', err);
+        flash($('resMsg'), 'Upload failed — ' + errMsg(err), false, 9000);
+      }
     };
   });
 
@@ -628,10 +649,14 @@ async function loadSettings(){
     flash($('setMsg'),'Uploading...');
     try{
       const url = await uploadImage(f);
-      await sb.from('site_content').upsert({ key:'photo_'+which, value:url, updated_at:new Date().toISOString() });
+      const { error: dbErr } = await sb.from('site_content').upsert({ key:'photo_'+which, value:url, updated_at:new Date().toISOString() });
+      if(dbErr){ console.error('[site photo] db upsert failed:', dbErr); throw dbErr; }
       $('th-'+which).src = url;
       flash($('setMsg'),'Photo uploaded and live on your website.');
-    }catch(err){ flash($('setMsg'), err.message, false); }
+    }catch(err){
+      console.error('[site photo] upload error:', err);
+      flash($('setMsg'), 'Upload failed — ' + errMsg(err), false, 9000);
+    }
   };
 });
 
