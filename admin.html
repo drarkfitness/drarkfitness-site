@@ -95,6 +95,41 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 .bar{height:7px;background:rgba(13,27,62,.09);border-radius:4px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:var(--gold)}
 
+/* ---------- collapsible client result cards ---------- */
+/* strong separation between clients: big gap + a real shadow so it is
+   obvious where one client ends and the next begins */
+.rcard{background:var(--white);border:1px solid var(--line);border-radius:8px;margin-bottom:32px;
+  box-shadow:0 1px 2px rgba(13,27,62,.06),0 8px 22px rgba(13,27,62,.07);overflow:hidden}
+.rcard.open{border-color:rgba(13,27,62,.30);box-shadow:0 2px 5px rgba(13,27,62,.10),0 14px 34px rgba(13,27,62,.13)}
+
+/* compact header — always visible, tap to expand */
+.rcard-head{display:flex;align-items:center;gap:7px;padding:11px 12px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.rcard-pos{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--slate);min-width:15px;text-align:center;flex:none}
+.rcard-thumb{width:40px;height:40px;flex:none;object-fit:cover;border:1px solid var(--line);border-radius:5px;background:#EDEAE3;display:block}
+.rcard-thumb.empty{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;letter-spacing:.05em;color:var(--slate);text-transform:uppercase;border-style:dashed;text-align:center;line-height:1.1}
+.rcard-id{flex:1;min-width:0}
+.rcard-name{font-weight:600;font-size:15.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rcard-sub{font-size:13px;color:var(--slate);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* website on/off status — its own chip so it is never truncated */
+.rcard-live{flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:4px 6px;border-radius:3px;background:rgba(13,27,62,.08);color:var(--slate);white-space:nowrap}
+.rcard-live.on{background:rgba(46,125,91,.16);color:var(--green)}
+.rcard-arrows{display:flex;gap:4px;flex:none}
+.rcard-arrows button{background:transparent;border:1px solid var(--line);color:var(--navy);width:28px;height:28px;border-radius:6px;font-size:14px;line-height:1;cursor:pointer;padding:0}
+.rcard-arrows button:disabled{opacity:.3;cursor:default}
+.rcard-chev{flex:none;color:var(--slate);font-size:12px;transition:transform .18s;padding:0 1px}
+.rcard.open .rcard-chev{transform:rotate(180deg)}
+
+/* expanded body */
+.rcard-body{display:none;padding:0 15px;border-top:1px solid var(--line)}
+.rcard.open .rcard-body{display:block}
+.rsec{padding:15px 0;border-bottom:1px solid var(--line)}
+.rsec-t{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--navy);font-weight:500;opacity:.72;margin-bottom:12px}
+textarea.grow{min-height:200px;overflow:hidden}
+
+/* sticky save bar at the bottom of the open card */
+.rcard-save{position:sticky;bottom:0;background:var(--white);border-top:1px solid var(--line);
+  margin:0 -15px;padding:12px 15px;display:flex;gap:10px;box-shadow:0 -5px 14px rgba(13,27,62,.07)}
+
 @media(min-width:700px){
   .stats{grid-template-columns:repeat(4,1fr)}
   .wrap{padding:0 24px}
@@ -586,94 +621,167 @@ function initResultCrops(){
   });
 }
 
+/* which client card is currently expanded (only one at a time).
+   Kept across reloads so the open card stays open after a save/upload. */
+let _openId = null;
+/* digits only — used for the compact header display of age */
+const _agenum = s => (s==null?'':String(s)).replace(/[^0-9]/g,'');
+
+/* auto-grow a textarea to fit its content */
+window.autoGrow = t => { if(!t) return; t.style.height='auto'; t.style.height = t.scrollHeight + 'px'; };
+
+/* size textareas + re-apply photo crops for a card once it is visible
+   (a hidden card has no real dimensions, so this must run on expand) */
+function primeCard(card){
+  if(!card) return;
+  card.querySelectorAll('textarea').forEach(window.autoGrow);
+  card.querySelectorAll('.crop').forEach(f => { if(f._cropApply) f._cropApply(); });
+}
+
+/* tap a header to expand it; opening one closes the others */
+window.toggleCard = id => {
+  const card = document.querySelector(`.rcard[data-cid="${id}"]`);
+  if(!card) return;
+  const willOpen = !card.classList.contains('open');
+  document.querySelectorAll('.rcard.open').forEach(c => c.classList.remove('open'));
+  if(willOpen){
+    card.classList.add('open');
+    _openId = id;
+    primeCard(card);
+    card.scrollIntoView({ block:'nearest' });
+  } else {
+    _openId = null;
+  }
+};
+
 async function loadResults(){
   const { data } = await sb.from('client_results').select('*').order('sort_order');
   if(!data || !data.length){ $('resList').innerHTML = '<div class="empty">No client results yet.</div>'; return; }
   window._results = data;
 
-  $('resList').innerHTML = data.map((r, idx) => `
-    <div class="card">
+  $('resList').innerHTML = data.map((r, idx) => {
+    const ageNum = _agenum(r.age);
+    const subLine = [ageNum, r.occupation].filter(Boolean).map(esc).join(' · ') || '&nbsp;';
+    const live = r.published
+      ? '<span class="rcard-live on" title="Shown on your website">On site</span>'
+      : '<span class="rcard-live" title="Hidden from your website">Hidden</span>';
+    const after = (r.photo_after||'').trim();
+    const thumb = after
+      ? `<img class="rcard-thumb" src="${esc(after)}" alt="">`
+      : `<div class="rcard-thumb empty">No<br>photo</div>`;
+    const open = r.id === _openId;
+    return `
+    <div class="rcard${open?' open':''}" data-cid="${r.id}">
 
-      <!-- 0. Order on the website -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--line)">
-        <span style="font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate)">Position ${idx+1} of ${data.length}</span>
-        <span style="display:flex;gap:6px">
-          <button class="btn ghost sm" onclick="moveResult('${r.id}',-1)" ${idx===0?'disabled':''} aria-label="Move up" title="Move up">↑</button>
-          <button class="btn ghost sm" onclick="moveResult('${r.id}',1)" ${idx===data.length-1?'disabled':''} aria-label="Move down" title="Move down">↓</button>
+      <!-- compact header: tap to expand; arrows work without expanding -->
+      <div class="rcard-head" onclick="toggleCard('${r.id}')">
+        <span class="rcard-pos">${idx+1}</span>
+        ${thumb}
+        <div class="rcard-id">
+          <div class="rcard-name">${esc(r.name)||'No name'}</div>
+          <div class="rcard-sub">${subLine}</div>
+        </div>
+        ${live}
+        <span class="rcard-arrows" onclick="event.stopPropagation()">
+          <button onclick="moveResult('${r.id}',-1)" ${idx===0?'disabled':''} aria-label="Move up" title="Move up">↑</button>
+          <button onclick="moveResult('${r.id}',1)" ${idx===data.length-1?'disabled':''} aria-label="Move down" title="Move down">↓</button>
         </span>
+        <span class="rcard-chev" aria-hidden="true">▾</span>
       </div>
 
-      <!-- 1. Who they are -->
-      <div class="row2">
-        <div><label>Their name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
-        <div><label>Their age</label><input value="${esc(r.age)}" data-f="age" data-id="${r.id}"></div>
-      </div>
-      <div class="row2">
-        <div><label>How many weeks</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
-        <div><label>Category</label>
-          <select data-f="category" data-id="${r.id}">
-            ${['fat_loss','muscle','pcos','blood_sugar','glp1'].map(c=>`<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ')}</option>`).join('')}
-          </select></div>
-      </div>
-      <label>Occupation — optional, short, e.g. "Doctor", "Teacher"</label>
-      <input value="${esc(r.occupation)}" data-f="occupation" data-id="${r.id}">
+      <div class="rcard-body">
 
-      <!-- 2. Their quote -->
-      <label>What they said, in their own words</label><textarea data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
+        <!-- Who they are -->
+        <div class="rsec">
+          <div class="rsec-t">Who they are</div>
+          <div class="row2">
+            <div><label>Their name or initials</label><input value="${esc(r.name)}" data-f="name" data-id="${r.id}"></div>
+            <div><label>Their age — number only, e.g. 28</label><input value="${esc(r.age)}" placeholder="28" inputmode="numeric" data-f="age" data-id="${r.id}"></div>
+          </div>
+          <div class="row2">
+            <div><label>How many weeks</label><input value="${esc(r.duration)}" data-f="duration" data-id="${r.id}"></div>
+            <div><label>Category</label>
+              <select data-f="category" data-id="${r.id}">
+                ${['fat_loss','muscle','pcos','blood_sugar','glp1'].map(c=>`<option value="${c}" ${r.category===c?'selected':''}>${c.replace('_',' ')}</option>`).join('')}
+              </select></div>
+          </div>
+          <label>Occupation — optional, short, e.g. "Doctor", "Teacher"</label>
+          <input value="${esc(r.occupation)}" data-f="occupation" data-id="${r.id}">
+        </div>
 
-      <!-- 3. The story -->
-      <label>Before — what they had tried</label><textarea data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
-      <label>What changed</label><textarea data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
-      <label>Result</label><textarea data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
-      <label>Full story — optional. If you write here, a "Read full story" button shows on your website.</label>
-      <textarea data-f="full_story" data-id="${r.id}">${esc(r.full_story)}</textarea>
+        <!-- Their words -->
+        <div class="rsec">
+          <div class="rsec-t">Their words</div>
+          <label>What they said — do not add quote marks, they are added automatically.</label>
+          <textarea oninput="autoGrow(this)" data-f="quote" data-id="${r.id}">${esc(r.quote)}</textarea>
+          <label>Before — what they had tried</label>
+          <textarea oninput="autoGrow(this)" data-f="before_text" data-id="${r.id}">${esc(r.before_text)}</textarea>
+          <label>What changed</label>
+          <textarea class="grow" oninput="autoGrow(this)" data-f="changed_text" data-id="${r.id}">${esc(r.changed_text)}</textarea>
+          <label>Result</label>
+          <textarea class="grow" oninput="autoGrow(this)" data-f="result_text" data-id="${r.id}">${esc(r.result_text)}</textarea>
+          <label>Full story — optional. If you write here, a "Read full story" button shows on your website.</label>
+          <textarea class="grow" oninput="autoGrow(this)" data-f="full_story" data-id="${r.id}">${esc(r.full_story)}</textarea>
+        </div>
 
-      <!-- 4. Their photos, side by side -->
-      <div class="row2">
-        <div><label>BEFORE photo</label>${photoField(r,'before')}</div>
-        <div><label>AFTER photo</label>${photoField(r,'after')}</div>
-      </div>
-      <p class="hint">Any photo shape works. The frame is the exact shape the website uses. Drag to move it, scroll or pinch to zoom, then press Save. What you see here is what visitors get.</p>
+        <!-- Photos -->
+        <div class="rsec">
+          <div class="rsec-t">Photos</div>
+          <div class="row2">
+            <div><label>BEFORE photo</label>${photoField(r,'before')}</div>
+            <div><label>AFTER photo</label>${photoField(r,'after')}</div>
+          </div>
+          <p class="hint">Any photo shape works. The frame is the exact shape the website uses. Drag to move it, scroll or pinch to zoom, then press Save. What you see here is what visitors get.</p>
+        </div>
 
-      <!-- 5. Their numbers. Start on the left, end on the right — same as the
-           website reads. The unit you pick here is the unit visitors see. -->
-      <div class="row3">
-        <div><label>Weight start</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
-        <div><label>Weight end</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
-        <div><label>Unit</label>
-          <select data-f="weight_unit" data-id="${r.id}">
-            ${['kg','lb'].map(u=>`<option value="${u}" ${(r.weight_unit||'kg')===u?'selected':''}>${u}</option>`).join('')}
-          </select></div>
-      </div>
-      <div class="row3">
-        <div><label>Waist start</label><input value="${esc(r.waist_start)}" data-f="waist_start" data-id="${r.id}"></div>
-        <div><label>Waist end</label><input value="${esc(r.waist_end)}" data-f="waist_end" data-id="${r.id}"></div>
-        <div><label>Unit</label>
-          <select data-f="waist_unit" data-id="${r.id}">
-            ${['in','cm'].map(u=>`<option value="${u}" ${(r.waist_unit||'in')===u?'selected':''}>${u}</option>`).join('')}
-          </select></div>
-      </div>
-      <div class="row2">
-        <div><label>HbA1c start (%)</label><input value="${esc(r.hba1c_start)}" data-f="hba1c_start" data-id="${r.id}"></div>
-        <div><label>HbA1c end (%)</label><input value="${esc(r.hba1c_end)}" data-f="hba1c_end" data-id="${r.id}"></div>
-      </div>
+        <!-- Numbers. Start on the left, end on the right — same as the website
+             reads. Waist is in inches. -->
+        <div class="rsec">
+          <div class="rsec-t">Numbers</div>
+          <div class="row3">
+            <div><label>Weight start</label><input value="${esc(r.weight_start)}" data-f="weight_start" data-id="${r.id}"></div>
+            <div><label>Weight end</label><input value="${esc(r.weight_end)}" data-f="weight_end" data-id="${r.id}"></div>
+            <div><label>Unit</label>
+              <select data-f="weight_unit" data-id="${r.id}">
+                ${['kg','lb'].map(u=>`<option value="${u}" ${(r.weight_unit||'kg')===u?'selected':''}>${u}</option>`).join('')}
+              </select></div>
+          </div>
+          <div class="row3">
+            <div><label>Waist start (in)</label><input value="${esc(r.waist_start)}" data-f="waist_start" data-id="${r.id}"></div>
+            <div><label>Waist end (in)</label><input value="${esc(r.waist_end)}" data-f="waist_end" data-id="${r.id}"></div>
+            <div><label>Unit</label>
+              <select data-f="waist_unit" data-id="${r.id}">
+                ${['in','cm'].map(u=>`<option value="${u}" ${(r.waist_unit||'in')===u?'selected':''}>${u}</option>`).join('')}
+              </select></div>
+          </div>
+          <div class="row2">
+            <div><label>HbA1c start (%)</label><input value="${esc(r.hba1c_start)}" data-f="hba1c_start" data-id="${r.id}"></div>
+            <div><label>HbA1c end (%)</label><input value="${esc(r.hba1c_end)}" data-f="hba1c_end" data-id="${r.id}"></div>
+          </div>
+        </div>
 
-      <!-- 6. The two tick boxes -->
-      <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:10px">
-        <input type="checkbox" style="width:20px;margin:0" ${r.consent_given?'checked':''} data-f="consent_given" data-id="${r.id}">
-        I have their written permission
-      </label>
-      <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:16px">
-        <input type="checkbox" style="width:20px;margin:0" ${r.published?'checked':''} data-f="published" data-id="${r.id}">
-        Show on website
-      </label>
+        <!-- Settings -->
+        <div class="rsec">
+          <div class="rsec-t">Settings</div>
+          <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:10px">
+            <input type="checkbox" style="width:20px;margin:0" ${r.consent_given?'checked':''} data-f="consent_given" data-id="${r.id}">
+            I have their written permission
+          </label>
+          <label style="display:flex;gap:10px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--body);font-size:15px;color:var(--navy);margin-bottom:0">
+            <input type="checkbox" style="width:20px;margin:0" ${r.published?'checked':''} data-f="published" data-id="${r.id}">
+            Show on website
+          </label>
+        </div>
 
-      <!-- 7. Save and delete -->
-      <div style="display:flex;gap:10px">
-        <button class="btn sm" onclick="saveResult('${r.id}')">Save</button>
-        <button class="btn danger" onclick="delResult('${r.id}')">Delete</button>
+        <!-- sticky Save / Delete bar -->
+        <div class="rcard-save">
+          <button class="btn sm" onclick="saveResult('${r.id}')">Save</button>
+          <button class="btn danger" onclick="delResult('${r.id}')">Delete</button>
+        </div>
+
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 
   document.querySelectorAll('[data-photo]').forEach(inp => {
     inp.onchange = async e => {
@@ -682,6 +790,8 @@ async function loadResults(){
       try{
         const url = await uploadImage(f);
         const which = e.target.dataset.photo.replace('photo_','');   // 'before' | 'after'
+        /* keep this card open through the reload */
+        _openId = e.target.dataset.id;
         /* new photo -> reset the crop to centre so it can be set fresh */
         await sb.from('client_results')
           .update({[e.target.dataset.photo]: url, [which+'_zoom']:1, [which+'_x']:0, [which+'_y']:0})
@@ -692,6 +802,9 @@ async function loadResults(){
   });
 
   initResultCrops();
+
+  /* the open card is visible now — size its textareas and apply its crops */
+  if(_openId) primeCard(document.querySelector(`.rcard[data-cid="${_openId}"]`));
 }
 
 /* ---------- reorder clients (up / down) ---------- */
@@ -721,6 +834,7 @@ window.saveResult = async id => {
 
 window.delResult = async id => {
   if(!confirm('Delete this client result? This cannot be undone.')) return;
+  if(_openId === id) _openId = null;
   await sb.from('client_results').delete().eq('id', id);
   loadResults();
 };
@@ -729,7 +843,9 @@ $('addRes').onclick = async () => {
   /* new clients go at the END by default */
   const { data } = await sb.from('client_results').select('sort_order').order('sort_order',{ascending:false}).limit(1);
   const next = (data && data[0] && data[0].sort_order!=null) ? (+data[0].sort_order + 1) : 0;
-  await sb.from('client_results').insert({ name:'New client', duration:'16 weeks', sort_order:next });
+  /* open the newly added client expanded so it can be filled in straight away */
+  const { data: ins } = await sb.from('client_results').insert({ name:'New client', duration:'16 weeks', sort_order:next }).select().single();
+  if(ins && ins.id) _openId = ins.id;
   loadResults();
 };
 

@@ -1254,7 +1254,16 @@ function resultMarkers(cl){
 
 function resultLine(lbl, txt){ return txt ? '<strong>'+_txt(lbl)+':</strong> '+_txt(txt)+'<br>' : ''; }
 function resultStory(cl){ return resultLine('Before', cl.before) + resultLine('What changed', cl.changed) + resultLine('Result', cl.result); }
-function resultMeta(cl){ return [cl.name, cl.age, cl.occupation, cl.duration].filter(Boolean).map(_txt).join(' · '); }
+/* age comes in as a plain number from the dashboard; the site adds "yrs".
+   If a stored value already says yr/year, leave it so we never print "yrs" twice. */
+function fmtAge(a){
+  a = String(a==null?'':a).trim();
+  if(!a) return '';
+  if(/yr|year/i.test(a)) return a;          // already has the word
+  if(/^\d+$/.test(a)) return a + ' yrs';    // pure number -> add it
+  return a;                                  // anything unexpected, leave as-is
+}
+function resultMeta(cl){ return [cl.name, fmtAge(cl.age), cl.occupation, cl.duration].filter(Boolean).map(_txt).join(' · '); }
 
 function renderResults(clients){
   const box = document.getElementById('c-results');
