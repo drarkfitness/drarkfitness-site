@@ -238,8 +238,11 @@ textarea.grow{min-height:200px;overflow:hidden}
 
     <div class="card">
       <h3>Price</h3>
-      <label>Price shown on the website</label>
-      <input id="s-price">
+      <label>Price for clients in Pakistan (PKR)</label>
+      <input id="s-price_pkr" placeholder="PKR 80,000">
+      <label>Price for clients outside Pakistan (USD)</label>
+      <input id="s-price_usd" placeholder="USD 300">
+      <p class="hint">Visitors in Pakistan see the PKR price. Everyone else sees the USD price. This is chosen from the visitor's time zone automatically — you do not need to do anything.</p>
       <label>Text under the price</label>
       <input id="s-price_note">
       <label>Places left</label>
@@ -1056,7 +1059,7 @@ $('addFaq').onclick = async () => {
 };
 
 /* ---------- settings ---------- */
-const KEYS = ['price','price_note','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
+const KEYS = ['price_pkr','price_usd','price_note','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
 
 /* crop state for Dr. ARK's own two photos, kept in site_content keys */
 const heroCrop  = { zoom:1, x:0, y:0 };

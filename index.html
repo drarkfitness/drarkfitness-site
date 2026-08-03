@@ -118,13 +118,14 @@ header{
 .mobile-menu .btn{margin-top:18px}
 
 /* ---------- hero ---------- */
-.hero{padding:44px 0 56px;background:var(--paper)}
-.hero h1{margin-bottom:20px}
-.hero .lead{color:var(--navy-soft);margin-bottom:28px}
-.hero-bullets{list-style:none;margin:0 0 28px}
+.hero{padding:26px 0 52px;background:var(--paper)}
+.hero .label{margin-bottom:10px}
+.hero h1{font-size:27px;margin-bottom:12px;line-height:1.14}
+.hero .lead{font-size:16.5px;line-height:1.5;color:var(--navy-soft);margin-bottom:16px}
+.hero-bullets{list-style:none;margin:22px 0 4px}
 .hero-bullets li{
-  position:relative;padding:7px 0 7px 24px;
-  font-size:17px;color:var(--navy-soft);
+  position:relative;padding:5px 0 5px 24px;
+  font-size:16px;color:var(--navy-soft);
 }
 .hero-bullets li::before{
   content:"";position:absolute;left:0;top:16px;
@@ -358,6 +359,9 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
   body{font-size:18px}
   .sec{padding:88px 0}
   h1{font-size:46px}
+  .hero h1{font-size:44px;margin-bottom:20px}
+  .hero .lead{font-size:19px;line-height:1.6;margin-bottom:28px}
+  .hero-bullets li{font-size:17px;padding:7px 0 7px 24px}
   h2{font-size:33px}
   .wrap{padding:0 40px}
   .hero{padding:60px 0 76px}
@@ -381,6 +385,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 @media (min-width:1024px){
   .sec{padding:112px 0}
   h1{font-size:56px}
+  .hero h1{font-size:54px}
   h2{font-size:36px}
   .nav{height:74px}
   .nav-links{display:flex}
@@ -420,6 +425,20 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .hero-proof.show{display:block}
 .hero-proof b{font-weight:500;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:#256B4C}
 .hero-media{display:flex;flex-direction:column;gap:16px}
+/* photo sits above the video in the hero — flex gap handles the spacing,
+   so drop the standalone photo margin that the About section still uses */
+.hero-media .hero-photo{margin-bottom:0}
+
+/* small, subtle social row under the hero buttons — gold accent.
+   #9A7C22 is the accessible gold for light backgrounds (design rule). */
+.hero-social{display:flex;flex-wrap:wrap;align-items:center;gap:9px 18px;margin-top:20px}
+.hero-social a{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12.5px;letter-spacing:.03em;color:#9A7C22;text-decoration:none}
+.hero-social a:hover{color:#7d6419}
+.hero-social svg{width:17px;height:17px;flex:none}
+
+/* social icons next to the footer links — gold marks on navy */
+.foot-list a.soc{display:inline-flex;align-items:center;gap:8px}
+.foot-list a.soc svg{width:15px;height:15px;flex:none;color:#DCC377}
 
 /* what you get */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}
@@ -561,18 +580,18 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 }
 
 /* masthead strip */
-.masthead{background:var(--navy);padding:26px 0 24px;text-align:center}
+.masthead{background:var(--navy);padding:14px 0 13px;text-align:center}
 .mh-brand{
   font-family:var(--display);font-weight:600;color:var(--gold);
-  font-size:34px;line-height:1.05;letter-spacing:.04em;text-transform:uppercase;
-  margin-bottom:12px;
+  font-size:25px;line-height:1.05;letter-spacing:.04em;text-transform:uppercase;
+  margin-bottom:5px;
 }
 .mh-name{
-  font-family:var(--body);font-size:16px;font-weight:500;color:#FFFDF8;margin-bottom:10px;
+  font-family:var(--body);font-size:14px;font-weight:500;color:#FFFDF8;margin-bottom:5px;
 }
 .mh-creds{
-  font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;
-  color:rgba(255,253,248,0.82);line-height:2;
+  font-family:var(--mono);font-size:10px;letter-spacing:.11em;text-transform:uppercase;
+  color:rgba(255,253,248,0.82);line-height:1.5;
 }
 @media (min-width:700px){
   .masthead{padding:34px 0 30px}
@@ -660,29 +679,40 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
     <div class="hero-inner">
       <div class="hero-text">
         <span class="label">The 16-Week Rebuild with Dr. ARK</span>
-        <h1>Lose the fat. Get your blood markers back where they should be.</h1>
-        <p class="lead">A 16-week program run by a doctor, for men and women. We work on your health, your energy and your habits first. The fat loss and the shape follow.</p>
+        <h1>Lose Fat. Restore Your Health. Build a Body That Lasts.</h1>
+        <p class="lead">A doctor-led 16-week transformation for South Asians (men and women) — in Pakistan or anywhere in the world. We improve your metabolic health, energy, strength, and daily habits, so fat loss becomes a sustainable result, not a temporary fix.</p>
+        <a href="#start" class="btn">Get Started</a>
+        <a href="#program" class="btn btn-ghost">See how it works</a>
         <ul class="hero-bullets">
           <li>Checked every day, not once a week</li>
-          <li>Blood markers measured, not guessed</li>
+          <li>Your test results checked properly, not guessed</li>
           <li>Lose fat and build muscle at the same time</li>
           <li>Eat Pakistani food — roti, chawal, salan, chai, dawats</li>
           <li>Habits that stay after the 16 weeks end</li>
         </ul>
-        <a href="#start" class="btn">Get Started</a>
-        <a href="#program" class="btn btn-ghost">See how it works</a>
-        <p class="hero-proof" id="c-hero-proof"></p>
-        <p class="cta-note">Takes 60 seconds. We reply on WhatsApp.</p>
-        <p class="cta-note">My commitment: follow the plan and hit your check-ins, or I keep coaching you free until your markers move.</p>
+        <div class="hero-social">
+          <a href="https://instagram.com/dr.arkfitness" target="_blank" rel="noopener" aria-label="Instagram, dr.arkfitness">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+            <span>@dr.arkfitness</span>
+          </a>
+          <a href="https://tiktok.com/@drarkfitness" target="_blank" rel="noopener" aria-label="TikTok, drarkfitness">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3c.4 2.1 1.6 3.4 3.5 3.6v2.5c-1.2.1-2.4-.3-3.5-1v6.4c0 3.2-2.5 5.5-5.4 5.5-2.7 0-4.9-2.1-4.9-4.9 0-3 2.7-5.2 5.8-4.6v2.6c-.4-.1-.8-.2-1.2-.1-1.2.1-2 1.1-1.9 2.3.1 1.1 1.1 2 2.2 1.9 1.2 0 2.1-1 2.1-2.3V3h3.3z"/></svg>
+            <span>@drarkfitness</span>
+          </a>
+          <a href="https://wa.me/923329999875" target="_blank" rel="noopener" aria-label="WhatsApp, +92 332 9999875">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5s-.7-1.6-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>
+            <span>+92 332 9999875</span>
+          </a>
+        </div>
       </div>
       <div class="hero-media">
+        <div class="hero-photo" id="c-photo-hero">
+          <div class="ph-note">Photo placeholder<br>Dr. ARK — portrait<br>Portrait 4:5 · 1200 × 1500px<br>Clinical or neutral setting</div>
+        </div>
         <button class="video-slot welcome-video" id="videoBtn" aria-label="Play welcome video">
           <span class="play"></span>
           <div class="ph-note">Welcome video — 90 seconds<br>Meet Dr. ARK · tap to play full screen</div>
         </button>
-        <div class="hero-photo" id="c-photo-hero">
-          <div class="ph-note">Photo placeholder<br>Dr. ARK — portrait<br>Portrait 4:5 · 1200 × 1500px<br>Clinical or neutral setting</div>
-        </div>
       </div>
     </div>
   </div>
@@ -695,7 +725,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <div class="trust-item">Run by a Doctor</div>
       <div class="trust-item">Daily Monitoring</div>
       <div class="trust-item">Men &amp; Women</div>
-      <div class="trust-item">Made for South Asians</div>
+      <div class="trust-item">For South Asians · Pakistan &amp; worldwide</div>
       <div class="trust-item">Root Cause First</div>
     </div>
     <div class="trust-creds">MBBS · NASM Certified Personal Trainer · Precision Nutrition Level 1</div>
@@ -739,6 +769,8 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <li><strong>Real answers when nothing is moving.</strong> <span>If you are doing the work and the scale will not shift, we look at what is going on underneath — instead of telling you to try harder.</span></li>
       <li><strong>We fix the reason, so the results stay.</strong> <span>Most programs start and end with the scale, so the weight comes back — nothing underneath it changed. When your health, energy and habits improve, the fat loss follows, and it holds because the real cause was dealt with.</span></li>
       <li><strong>Habits that outlast any diet trend.</strong> <span>Keto, fasting, detox teas — people lose weight and put it straight back, because nobody can live like that forever. The boring work nobody sells — mindset, habits, handling a bad weekend — is what decides whether you are still holding your results in two years.</span></li>
+      <li><strong>Your numbers read against the right scale.</strong> <span>South Asians carry more fat and more risk at a lower weight than Western charts assume — which is why the WHO uses different thresholds for us. A normal BMI can hide a real problem.</span></li>
+      <li><strong>Muscle treated as a priority.</strong> <span>South Asians tend to carry less muscle, and muscle is where your body handles sugar. Your training is built around that from day one.</span></li>
     </ul>
     <p class="callout">This is not a diet chart with a doctor's name on it. It is complete metabolic care, built around your real life.</p>
   </div>
@@ -853,6 +885,11 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
     <h2>You are not paying for a diet chart.</h2>
 
     <div class="value">
+      <h3>What a doctor sees that a coach cannot.</h3>
+      <p>If your thyroid is slow, your vitamin D is low, or the tablet you take every morning is working against you — a coach has no way of knowing. They will assume you are not trying hard enough, and so will you. Half the people who think they have a discipline problem have something else going on. Finding that out is the difference between another failed attempt and a plan that finally works.</p>
+    </div>
+
+    <div class="value">
       <h3>Three people, one program</h3>
       <p>A doctor, a personal trainer and a nutrition coach — by your side, every step of the way, for sixteen weeks.</p>
       <p>Hire those three separately and you would pay far more than this, and they still would not talk to each other. Here, they are the same person, looking at the same information about you.</p>
@@ -906,6 +943,8 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <p class="muted" style="font-size:16.5px;margin-bottom:18px">Sixteen weeks, not six months. I do not need half a year of your life to show you something real. If this works, you will see it in the mirror and in your reports well before the end.</p>
 
       <div class="price-line"><span class="price-num" id="c-price">PKR 80,000</span><span class="price-per" id="c-price-note">16 weeks · everything included</span></div>
+
+      <p class="muted" style="font-family:var(--mono);font-size:12px;letter-spacing:.03em;margin:-8px 0 20px">Prices shown in USD for clients outside Pakistan.</p>
 
       <div class="stack">
         <div class="stack-row"><span>A doctor who reads your history and your reports</span><span>included</span></div>
@@ -1005,6 +1044,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <li><strong>You are always tired</strong> — and want your energy back, not just a smaller number on the scale.</li>
       <li><strong>You are on a weight-loss medicine</strong> — and want to do it properly so it lasts.</li>
       <li><strong>You want to eat Pakistani food</strong> — roti, chawal, salan, biryani — and still get results.</li>
+      <li><strong>You live abroad</strong> — and every plan you find was written for someone who does not eat like you.</li>
     </ul>
     <p class="callout">You don't need to be ill to start. You just need to be ready to take this seriously.</p>
     <hr class="rule">
@@ -1123,7 +1163,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <div>
         <div class="foot-head">Get in touch</div>
         <ul class="foot-list">
-          <li><a href="https://wa.me/923329999875" target="_blank" rel="noopener">WhatsApp — +92 332 9999875</a></li>
+          <li><a class="soc" href="https://wa.me/923329999875" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-1.7-.8-2.8-1.5-3.9-3.4-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5s-.7-1.6-.9-2.2c-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.3zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z"/></svg>WhatsApp — +92 332 9999875</a></li>
           <li><a href="mailto:drarkfitness@gmail.com">drarkfitness@gmail.com</a></li>
           <li>Peshawar, Pakistan</li>
           <li>Coaching runs online</li>
@@ -1144,9 +1184,9 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <div>
         <div class="foot-head">Follow</div>
         <ul class="foot-list">
-          <li><a href="https://instagram.com/dr.arkfitness" target="_blank" rel="noopener">Instagram — @dr.arkfitness</a></li>
+          <li><a class="soc" href="https://instagram.com/dr.arkfitness" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>Instagram — @dr.arkfitness</a></li>
           <li><a href="#">YouTube</a></li>
-          <li><a href="https://tiktok.com/@drarkfitness" target="_blank" rel="noopener">TikTok — @drarkfitness</a></li>
+          <li><a class="soc" href="https://tiktok.com/@drarkfitness" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.5 3c.4 2.1 1.6 3.4 3.5 3.6v2.5c-1.2.1-2.4-.3-3.5-1v6.4c0 3.2-2.5 5.5-5.4 5.5-2.7 0-4.9-2.1-4.9-4.9 0-3 2.7-5.2 5.8-4.6v2.6c-.4-.1-.8-.2-1.2-.1-1.2.1-2 1.1-1.9 2.3.1 1.1 1.1 2 2.2 1.9 1.2 0 2.1-1 2.1-2.3V3h3.3z"/></svg>TikTok — @drarkfitness</a></li>
         </ul>
       </div>
     </div>
@@ -1216,6 +1256,23 @@ document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
    ============================================================ */
 const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* ---- currency by location ----
+   PKR for visitors in Pakistan, USD for everyone else. Detection uses the
+   browser time zone (Asia/Karachi = Pakistan). If detection fails for any
+   reason, default to PKR. */
+const IN_PAKISTAN = (function(){
+  try{ return Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Karachi'; }
+  catch(e){ return true; }
+})();
+function chooseCurrency(pkr, usd){
+  pkr = (pkr==null?'':String(pkr)).trim();
+  usd = (usd==null?'':String(usd)).trim();
+  return IN_PAKISTAN ? (pkr || usd) : (usd || pkr);
+}
+/* swap {price} inside any stored text (e.g. the cost FAQ) for the price in
+   the visitor's currency, so it switches the same way the price card does */
+function withPrice(txt){ return (txt==null?'':String(txt)).split('{price}').join(window._priceStr || ''); }
 
 /* strip any leading/trailing quote marks (straight or curly) so a stored
    value like "great" does not render as ""great"" once we add our own. */
@@ -1512,10 +1569,12 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   const C = CONTENT;
   const set = (id, val) => { const el=document.getElementById(id); if(el && val) el.textContent = val; };
 
-  /* price */
-  set('c-price', C.price);
+  /* price — PKR in Pakistan, USD elsewhere (see chooseCurrency) */
+  const cPrice = chooseCurrency(C.pricePkr, C.priceUsd) || C.price;
+  window._priceStr = cPrice;
+  set('c-price', cPrice);
   set('c-price-note', C.priceNote);
-  set('c-price-total', C.price);
+  set('c-price-total', cPrice);
 
   /* photos of Dr ARK */
   const photo = (id, src, alt) => {
@@ -1552,7 +1611,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   const faqBox = document.getElementById('c-faq');
   if(faqBox && C.faqs){
     faqBox.innerHTML = C.faqs.map(f =>
-      '<details><summary>'+f.q+'</summary><div class="ans">'+f.a+'</div></details>'
+      '<details><summary>'+f.q+'</summary><div class="ans">'+withPrice(f.a)+'</div></details>'
     ).join('');
   }
 
@@ -1594,7 +1653,9 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     const { data } = await db.from('site_content').select('key,value');
     const c = {}; (data||[]).forEach(r=>c[r.key]=r.value);
 
-    set('c-price', c.price); set('c-price-total', c.price); set('c-price-note', c.price_note);
+    const cPrice = chooseCurrency(c.price_pkr, c.price_usd) || c.price;
+    window._priceStr = cPrice;
+    set('c-price', cPrice); set('c-price-total', cPrice); set('c-price-note', c.price_note);
 
     const photo = (id,src,alt,crop) => {
       const el=document.getElementById(id);
@@ -1638,7 +1699,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     const { data: fq } = await db.from('faqs').select('*').eq('published', true).order('sort_order');
     const fbox = document.getElementById('c-faq');
     if(fbox && fq && fq.length){
-      fbox.innerHTML = fq.map(f=>'<details><summary>'+f.question+'</summary><div class="ans">'+f.answer+'</div></details>').join('');
+      fbox.innerHTML = fq.map(f=>'<details><summary>'+f.question+'</summary><div class="ans">'+withPrice(f.answer)+'</div></details>').join('');
     }
   }catch(e){}
 
