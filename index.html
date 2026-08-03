@@ -458,6 +458,10 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .price-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;margin:6px 0 20px}
 .price-num{font-family:var(--mono);font-size:34px;font-weight:500;color:var(--navy);letter-spacing:-.01em}
 .price-per{font-family:var(--mono);font-size:12.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--slate)}
+.cur-switch{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:2px 0 22px}
+.cur-switch button{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;padding:10px 16px;min-height:44px;background:var(--white);color:var(--slate);border:0;cursor:pointer;line-height:1}
+.cur-switch button + button{border-left:1px solid var(--line)}
+.cur-switch button[aria-pressed="true"]{background:var(--navy);color:#fff}
 
 /* for / not-for */
 .forlist{list-style:none;margin:20px 0}
@@ -942,9 +946,15 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 
       <p class="muted" style="font-size:16.5px;margin-bottom:18px">Sixteen weeks, not six months. I do not need half a year of your life to show you something real. If this works, you will see it in the mirror and in your reports well before the end.</p>
 
-      <div class="price-line"><span class="price-num" id="c-price">PKR 80,000</span><span class="price-per" id="c-price-note">16 weeks · everything included</span></div>
+      <div class="price-line" id="c-price-line"><span class="price-num" id="c-price">PKR 80,000</span><span class="price-per" id="c-price-note">16 weeks · everything included</span></div>
+      <div class="price-line" id="c-price-line-2" style="display:none"><span class="price-num" id="c-price-2"></span><span class="price-per" id="c-price-note-2"></span></div>
 
-      <p class="muted" style="font-family:var(--mono);font-size:12px;letter-spacing:.03em;margin:-8px 0 20px">Prices shown in USD for clients outside Pakistan.</p>
+      <p class="muted" id="c-price-intl-note" style="font-family:var(--mono);font-size:12px;letter-spacing:.03em;margin:-8px 0 14px;display:none">Prices shown in USD for clients outside Pakistan.</p>
+
+      <div class="cur-switch" id="cur-switch" role="group" aria-label="Show price in">
+        <button type="button" data-cur="pkr" aria-pressed="true">PKR</button>
+        <button type="button" data-cur="usd" aria-pressed="false">USD</button>
+      </div>
 
       <div class="stack">
         <div class="stack-row"><span>A doctor who reads your history and your reports</span><span>included</span></div>
@@ -1257,22 +1267,131 @@ document.querySelectorAll('.rev,.marker').forEach(el=>io.observe(el));
 const _attr = s => (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const _txt  = s => (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 
-/* ---- currency by location ----
-   PKR for visitors in Pakistan, USD for everyone else. Detection uses the
-   browser time zone (Asia/Karachi = Pakistan). If detection fails for any
-   reason, default to PKR. */
-const IN_PAKISTAN = (function(){
-  try{ return Intl.DateTimeFormat().resolvedOptions().timeZone === 'Asia/Karachi'; }
-  catch(e){ return true; }
+/* ============================================================
+   CURRENCY — layered detection + manual switch
+   What a visitor sees is decided in this order:
+     1. ?currency=usd | pkr in the URL  → wins and locks (lets Dr. ARK test)
+     2. IP geolocation country          → Pakistan = PKR, else USD (async)
+     3. browser time zone               → Asia/Karachi = PKR (shown until IP resolves)
+     4. default                         → PKR
+   A visitor can also flip it by hand with the switch next to the price;
+   that choice wins and locks, exactly like the URL param.
+
+   What an INTERNATIONAL visitor sees (USD only / both / PKR only) is set by
+   Dr. ARK in the dashboard (price_intl_display). The URL param and the manual
+   switch bypass that and force a single currency, so testing is exact.
+
+   The IP lookup never blocks the page: the time-zone guess paints first, and
+   the price only changes if the lookup disagrees. If it fails, the guess stays. */
+const Pricing = (function(){
+  let pkr='PKR 80,000', usd='USD 300';
+  let pkrNote='16 weeks · everything included', usdNote='16 weeks · everything included';
+  let intlNote='Prices shown in USD for clients outside Pakistan.';
+  let displayMode='international_only';   /* international_only | both | pakistan_only */
+
+  let region='pk';        /* 'pk' | 'intl' — best current guess */
+  let override=null;      /* null | 'pkr' | 'usd' — URL param or manual switch */
+  let locked=false;       /* once true, the IP result is ignored */
+
+  const one = s => (s==null?'':String(s)).trim();
+
+  /* step 3 — immediate synchronous guess from the browser time zone */
+  try{ if(Intl.DateTimeFormat().resolvedOptions().timeZone !== 'Asia/Karachi') region='intl'; }
+  catch(e){}
+
+  /* step 1 — URL param sets the shown currency directly and locks it */
+  try{
+    const q=(new URLSearchParams(location.search).get('currency')||'').toLowerCase();
+    if(q==='usd'||q==='pkr'){ override=q; locked=true; region=(q==='pkr'?'pk':'intl'); }
+  }catch(e){}
+
+  function view(){
+    if(override) return override;                 /* 'pkr' | 'usd' */
+    if(region==='pk') return 'pkr';
+    if(displayMode==='pakistan_only') return 'pkr';
+    if(displayMode==='both') return 'both';
+    return 'usd';                                 /* international_only (default) */
+  }
+  function single(){ return view()==='usd' ? one(usd) : one(pkr); }   /* one price for {price} / total */
+  function totalStr(){ return view()==='both' ? one(pkr)+' · '+one(usd) : single(); }
+  function faqPrice(){ return view()==='both' ? one(pkr)+' ('+one(usd)+' outside Pakistan)' : single(); }
+
+  function paint(){
+    const v=view();
+    const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
+    /* line 1 — primary currency for this view */
+    if(v==='usd'){ set('c-price', one(usd)); set('c-price-note', one(usdNote)); }
+    else         { set('c-price', one(pkr)); set('c-price-note', one(pkrNote)); }
+    /* line 2 — only used by 'both' (PKR on line 1, USD on line 2) */
+    const line2=document.getElementById('c-price-line-2');
+    if(line2){
+      if(v==='both'){ set('c-price-2', one(usd)); set('c-price-note-2', one(usdNote)); line2.style.display=''; }
+      else line2.style.display='none';
+    }
+    /* small note under the price — only when USD is on show */
+    const note=document.getElementById('c-price-intl-note');
+    if(note){ note.textContent=one(intlNote); note.style.display=(v==='pkr'||!one(intlNote))?'none':''; }
+    /* value-stack total and the FAQ {price} spans */
+    set('c-price-total', totalStr());
+    window._priceStr=single();
+    document.querySelectorAll('.c-faq-price').forEach(s=>{ s.textContent=faqPrice(); });
+    /* switch active state — 'both' highlights PKR (the primary line) */
+    const sw=document.getElementById('cur-switch');
+    if(sw){
+      const active = v==='usd' ? 'usd' : 'pkr';
+      sw.querySelectorAll('button[data-cur]').forEach(b=>{
+        b.setAttribute('aria-pressed', b.getAttribute('data-cur')===active ? 'true':'false');
+      });
+    }
+  }
+
+  /* step 2 — IP geolocation, async, never blocks the first paint */
+  if(!locked && typeof fetch==='function'){
+    const ctrl = ('AbortController' in window) ? new AbortController() : null;
+    const to = setTimeout(()=>{ if(ctrl) ctrl.abort(); }, 2500);
+    fetch('https://ipapi.co/json/', ctrl?{signal:ctrl.signal}:undefined)
+      .then(r=>r.ok?r.json():Promise.reject())
+      .then(d=>{
+        clearTimeout(to);
+        const cc=((d&&(d.country_code||d.country))||'').toString().toUpperCase();
+        if(!cc||locked) return;
+        const r = cc==='PK' ? 'pk' : 'intl';
+        if(r!==region){ region=r; paint(); }
+      })
+      .catch(()=>{ clearTimeout(to); });   /* step 4 — keep the time-zone guess */
+  }
+
+  return {
+    set(o){
+      o=o||{};
+      const g=(k,cur)=> (o[k]!=null && String(o[k]).trim()!=='') ? String(o[k]) : cur;
+      pkr=g('pkr',pkr); usd=g('usd',usd);
+      pkrNote=g('pkrNote',pkrNote); usdNote=g('usdNote',usdNote);
+      if(o.intlNote!=null) intlNote=String(o.intlNote);
+      if(o.displayMode && /^(international_only|both|pakistan_only)$/.test(o.displayMode)) displayMode=o.displayMode;
+    },
+    render:paint,
+    choose(cur){ override=(cur==='usd')?'usd':'pkr'; locked=true; paint(); }
+  };
 })();
-function chooseCurrency(pkr, usd){
-  pkr = (pkr==null?'':String(pkr)).trim();
-  usd = (usd==null?'':String(usd)).trim();
-  return IN_PAKISTAN ? (pkr || usd) : (usd || pkr);
+
+/* swap {price} inside stored text (e.g. the cost FAQ) for a live span, so it
+   tracks the visitor's currency the same way the price card does. */
+function withPrice(txt){
+  return (txt==null?'':String(txt)).split('{price}')
+    .join('<span class="c-faq-price">'+_txt(window._priceStr||'')+'</span>');
 }
-/* swap {price} inside any stored text (e.g. the cost FAQ) for the price in
-   the visitor's currency, so it switches the same way the price card does */
-function withPrice(txt){ return (txt==null?'':String(txt)).split('{price}').join(window._priceStr || ''); }
+
+/* wire the manual currency switch, then paint the built-in defaults so the
+   price card is correct before content.js / Supabase load. */
+(function(){
+  const sw=document.getElementById('cur-switch');
+  if(sw) sw.addEventListener('click', e=>{
+    const b=e.target.closest('button[data-cur]');
+    if(b) Pricing.choose(b.getAttribute('data-cur'));
+  });
+  Pricing.render();
+})();
 
 /* strip any leading/trailing quote marks (straight or curly) so a stored
    value like "great" does not render as ""great"" once we add our own. */
@@ -1569,12 +1688,13 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
   const C = CONTENT;
   const set = (id, val) => { const el=document.getElementById(id); if(el && val) el.textContent = val; };
 
-  /* price — PKR in Pakistan, USD elsewhere (see chooseCurrency) */
-  const cPrice = chooseCurrency(C.pricePkr, C.priceUsd) || C.price;
-  window._priceStr = cPrice;
-  set('c-price', cPrice);
-  set('c-price-note', C.priceNote);
-  set('c-price-total', cPrice);
+  /* price — hand the values to the Pricing controller (see currency block) */
+  Pricing.set({
+    pkr: C.pricePkr || C.price, usd: C.priceUsd,
+    pkrNote: C.priceNote, usdNote: C.priceUsdNote || C.priceNote,
+    intlNote: C.priceIntlNote, displayMode: C.priceIntlDisplay
+  });
+  Pricing.render();
 
   /* photos of Dr ARK */
   const photo = (id, src, alt) => {
@@ -1613,6 +1733,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     faqBox.innerHTML = C.faqs.map(f =>
       '<details><summary>'+f.q+'</summary><div class="ans">'+withPrice(f.a)+'</div></details>'
     ).join('');
+    Pricing.render();   /* fill the {price} spans just created in the FAQ */
   }
 
   /* re-observe newly created elements for scroll animation */
@@ -1653,9 +1774,12 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     const { data } = await db.from('site_content').select('key,value');
     const c = {}; (data||[]).forEach(r=>c[r.key]=r.value);
 
-    const cPrice = chooseCurrency(c.price_pkr, c.price_usd) || c.price;
-    window._priceStr = cPrice;
-    set('c-price', cPrice); set('c-price-total', cPrice); set('c-price-note', c.price_note);
+    Pricing.set({
+      pkr: c.price_pkr || c.price, usd: c.price_usd,
+      pkrNote: c.price_note, usdNote: c.price_usd_note || c.price_note,
+      intlNote: c.price_intl_note, displayMode: c.price_intl_display
+    });
+    Pricing.render();
 
     const photo = (id,src,alt,crop) => {
       const el=document.getElementById(id);
@@ -1700,6 +1824,7 @@ toTop.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
     const fbox = document.getElementById('c-faq');
     if(fbox && fq && fq.length){
       fbox.innerHTML = fq.map(f=>'<details><summary>'+f.question+'</summary><div class="ans">'+withPrice(f.answer)+'</div></details>').join('');
+      Pricing.render();   /* fill the {price} spans just created in the FAQ */
     }
   }catch(e){}
 
