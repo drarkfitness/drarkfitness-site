@@ -609,6 +609,10 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 .hl li:last-child{border-bottom:0}
 .hl strong{display:block;font-size:17.5px;margin-bottom:5px}
 .hl span{font-size:16.5px;color:var(--navy-soft);line-height:1.6}
+/* highlights on a dark section — keep every line legible on navy */
+.sec-dark .hl li{border-bottom-color:rgba(255,253,248,0.18)}
+.sec-dark .hl strong{color:#FFFDF8}
+.sec-dark .hl span{color:rgba(255,253,248,0.85)}
 </style>
 </head><body>
 
@@ -718,7 +722,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 </section>
 
 <!-- WHY DIFFERENT -->
-<section class="sec sec-white">
+<section class="sec sec-dark">
   <div class="wrap narrow rev">
     <span class="label">Why this is different</span>
     <h2>Nobody has ever looked at your whole picture.</h2>
@@ -768,13 +772,9 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         <p class="muted" style="font-size:16px">I take a small number of clients at a time and read everything myself.</p>
       </div>
       <div>
-        <div class="hero-photo" id="c-photo-about" style="margin-bottom:16px">
+        <div class="hero-photo" id="c-photo-about">
           <div class="ph-note">Photo placeholder<br>Dr. ARK — seated / consulting<br>Portrait 4:5 · 1200 × 1500px</div>
         </div>
-        <button class="video-slot welcome-video" aria-label="Play welcome video">
-          <span class="play"></span>
-          <div class="ph-note">Welcome video — 90 seconds<br>Meet Dr. ARK · tap to play full screen</div>
-        </button>
       </div>
     </div>
   </div>
@@ -1302,17 +1302,21 @@ function resultMeta(cl){ return [cl.name, fmtAge(cl.age), cl.occupation, cl.dura
 
 /* hero proof — one real client result under the hero buttons. Pulled from
    the same client list, so it updates when better results are added. Shows
-   the first client that has real start AND end weight; nothing if none do. */
+   the client with the LARGEST weight change (not the first row), so the hero
+   always leads with the strongest result; nothing if no real numbers exist. */
 function renderHeroProof(clients){
   const el = document.getElementById('c-hero-proof');
   if(!el) return;
   const list = (clients||[]).filter(Boolean);
-  let pick = null;
+  let pick = null, best = -1;
   for(let k=0;k<list.length;k++){
     const cl = list[k];
     const a = parseFloat(String(cl.weightStart==null?'':cl.weightStart).replace(/[^0-9.\-]/g,''));
     const b = parseFloat(String(cl.weightEnd==null?'':cl.weightEnd).replace(/[^0-9.\-]/g,''));
-    if(isFinite(a) && isFinite(b) && a !== b){ pick = cl; break; }
+    if(isFinite(a) && isFinite(b) && a !== b){
+      const change = Math.abs(b - a);
+      if(change > best){ best = change; pick = cl; }
+    }
   }
   if(!pick){ el.className = 'hero-proof'; el.innerHTML = ''; return; }
   const unit = _txt(pick.weightUnit || 'kg');
