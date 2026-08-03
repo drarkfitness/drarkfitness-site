@@ -172,8 +172,8 @@ const CONTENT = {
     { q: "Which app do you use?",
       a: "Trainerize at the moment, with our own app coming. Everything sits in one place — your plan, your workouts, your logs and your progress." },
 
-    { q: "Why sixteen weeks and not twelve?",
-      a: "Twelve weeks gets you started. Sixteen gets you a change you can actually see, and gives the new habits enough time to stop feeling like effort." },
+    { q: "Why sixteen weeks?",
+      a: "Sixteen weeks, not six months. I do not need half a year of your life to show you something real — you will see it in the mirror and in your reports well before the end. Sixteen weeks is also long enough for the new habits to stop feeling like hard work, so the change stays after the program ends." },
 
     { q: "I have paid a coach before and it did not work.",
       a: "Ask yourself what you actually got. Usually one plan, sent once, with nobody watching and nobody checking whether something else was getting in the way." },

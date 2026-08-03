@@ -272,6 +272,7 @@ textarea.grow{min-height:200px;overflow:hidden}
       <div class="crop-tools">
         <button type="button" class="btn ghost sm" id="reset-hero">Reset crop</button>
         <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" id="up-hero" style="display:none"></label>
+        <button type="button" class="btn danger" id="remove-hero" style="display:none">Remove photo</button>
       </div>
       <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide). This frame is the exact shape the website uses.</p>
 
@@ -283,6 +284,7 @@ textarea.grow{min-height:200px;overflow:hidden}
       <div class="crop-tools">
         <button type="button" class="btn ghost sm" id="reset-about">Reset crop</button>
         <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" id="up-about" style="display:none"></label>
+        <button type="button" class="btn danger" id="remove-about" style="display:none">Remove photo</button>
       </div>
       <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide). This frame is the exact shape the website uses.</p>
 
@@ -457,6 +459,22 @@ window.setStatus = async (id, status) => {
   loadStats();
 };
 
+/* ---------- storage delete ----------
+   Turn a public URL back into its object path inside the 'images' bucket and
+   delete the file, so removing a photo or video also frees the storage. Only
+   acts on files we uploaded to this bucket — pasted YouTube/Vimeo links and
+   old repo images (images/foo.jpg) are left alone. Best-effort: never blocks
+   clearing the field if the delete fails. */
+async function deleteFromStorage(url){
+  url = (url||'').trim();
+  const marker = '/storage/v1/object/public/images/';
+  const i = url.indexOf(marker);
+  if(i === -1) return;
+  const path = decodeURIComponent(url.slice(i + marker.length).split(/[?#]/)[0]);
+  if(!path) return;
+  try{ await sb.storage.from('images').remove([path]); }catch(e){}
+}
+
 /* ---------- image upload ---------- */
 async function uploadImage(file){
   const name = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.]/g,'-').toLowerCase();
@@ -623,6 +641,7 @@ function photoField(r, which){                 // which = 'before' | 'after'
       <div class="crop-tools">
         <button type="button" class="btn ghost sm" data-resetcrop="${which}" data-id="${id}">Reset crop</button>
         <label class="btn ghost sm" style="margin:0;cursor:pointer">Change photo<input type="file" accept="image/*" data-photo="photo_${which}" data-id="${id}" style="display:none"></label>
+        <button type="button" class="btn danger" onclick="removeResultPhoto('${id}','${which}')">Remove</button>
       </div>
       <input type="hidden" data-f="${which}_zoom" data-id="${id}" value="${Number(z)}">
       <input type="hidden" data-f="${which}_x" data-id="${id}" value="${Number(x)}">
@@ -960,10 +979,29 @@ window.delResult = async id => {
   loadResults();
 };
 
-/* remove just this client's video (file or link) and clear its thumbnail crop */
-window.removeResultVideo = async id => {
-  if(!confirm('Remove this client\'s video? Their photos and story stay.')) return;
+/* remove just this client's BEFORE or AFTER photo: clear the field, reset its
+   crop, and delete the file from storage */
+window.removeResultPhoto = async (id, which) => {
+  if(!confirm('Remove this ' + which + ' photo? This deletes the file and cannot be undone.')) return;
   _openId = id;   /* keep this card open through the reload */
+  const r = (window._results||[]).find(x => x.id === id);
+  flash($('resMsg'),'Removing photo...');
+  await deleteFromStorage(r ? r['photo_'+which] : '');
+  const { error } = await sb.from('client_results')
+    .update({ ['photo_'+which]:'', [which+'_zoom']:1, [which+'_x']:0, [which+'_y']:0 })
+    .eq('id', id);
+  if(error){ flash($('resMsg'), error.message, false); return; }
+  flash($('resMsg'),'Photo removed.');
+  loadResults();
+};
+
+/* remove just this client's video (file or link), clear its thumbnail crop,
+   and delete the uploaded file from storage (links have nothing to delete) */
+window.removeResultVideo = async id => {
+  if(!confirm('Remove this client\'s video? Their photos and story stay. This cannot be undone.')) return;
+  _openId = id;   /* keep this card open through the reload */
+  const r = (window._results||[]).find(x => x.id === id);
+  await deleteFromStorage(r ? r.video_url : '');
   const { error } = await sb.from('client_results')
     .update({ video_url:'', video_zoom:1, video_x:0, video_y:0 })
     .eq('id', id);
@@ -1041,6 +1079,8 @@ async function loadSettings(){
   renderWelcomeVideoPreview(map.video_url);
   $('th-hero').src  = map.photo_hero  || '';
   $('th-about').src = map.photo_about || '';
+  $('remove-hero').style.display  = map.photo_hero  ? '' : 'none';
+  $('remove-about').style.display = map.photo_about ? '' : 'none';
   heroCrop.zoom  = parseFloat(map.photo_hero_zoom)  || 1;
   heroCrop.x     = parseFloat(map.photo_hero_x)     || 0;
   heroCrop.y     = parseFloat(map.photo_hero_y)     || 0;
@@ -1071,8 +1111,31 @@ async function loadSettings(){
       st.zoom=1; st.x=0; st.y=0;
       $('th-'+which).src = url;
       $('crop-'+which)._cropApply();
+      if(window._content) window._content['photo_'+which] = url;
+      $('remove-'+which).style.display = '';
       flash($('setMsg'),'Photo uploaded. Drag and zoom to set the crop, then press Save changes.');
     }catch(err){ flash($('setMsg'), err.message, false); }
+  };
+  $('remove-'+which).onclick = async () => {
+    if(!confirm('Remove your ' + which + ' photo? This deletes the file and cannot be undone.')) return;
+    flash($('setMsg'),'Removing photo...');
+    const cur = (window._content && window._content['photo_'+which]) || '';
+    await deleteFromStorage(cur);
+    const now = new Date().toISOString();
+    const { error } = await sb.from('site_content').upsert([
+      { key:'photo_'+which,        value:'',  updated_at:now },
+      { key:'photo_'+which+'_zoom', value:'1', updated_at:now },
+      { key:'photo_'+which+'_x',    value:'0', updated_at:now },
+      { key:'photo_'+which+'_y',    value:'0', updated_at:now }
+    ]);
+    if(error){ flash($('setMsg'), error.message, false); return; }
+    const st = which==='hero' ? heroCrop : aboutCrop;
+    st.zoom=1; st.x=0; st.y=0;
+    $('th-'+which).removeAttribute('src');
+    $('crop-'+which)._cropApply();
+    if(window._content) window._content['photo_'+which] = '';
+    $('remove-'+which).style.display = 'none';
+    flash($('setMsg'),'Photo removed.');
   };
 });
 
@@ -1099,6 +1162,7 @@ $('up-welcome-video').onchange = async e => {
   try{
     const url = await uploadVideo(f);
     await sb.from('site_content').upsert([{ key:'video_url', value:url, updated_at:new Date().toISOString() }]);
+    if(window._content) window._content.video_url = url;
     $('s-video_url').value = url;
     renderWelcomeVideoPreview(url);
     flash($('setMsg'),'Video uploaded and saved. It is now live on your website.');
@@ -1107,9 +1171,13 @@ $('up-welcome-video').onchange = async e => {
 };
 
 $('remove-welcome-video').onclick = async () => {
-  if(!confirm('Remove your welcome video? The video button on your website goes back to the placeholder.')) return;
+  if(!confirm('Remove your welcome video? The video button on your website goes back to the placeholder. This cannot be undone.')) return;
+  flash($('setMsg'),'Removing video...');
+  const cur = (window._content && window._content.video_url) || $('s-video_url').value;
+  await deleteFromStorage(cur);
   const { error } = await sb.from('site_content').upsert([{ key:'video_url', value:'', updated_at:new Date().toISOString() }]);
   if(error){ flash($('setMsg'), error.message, false); return; }
+  if(window._content) window._content.video_url = '';
   $('s-video_url').value = '';
   renderWelcomeVideoPreview('');
   flash($('setMsg'),'Welcome video removed.');
