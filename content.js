@@ -20,11 +20,13 @@ const CONTENT = {
      1. PRICE
      ---------------------------------------------------------- */
 
-  price: "PKR 80,000",
+  price: "PKR 80,000",              /* fallback only — kept for older content */
+  pricePkr: "PKR 80,000",           /* shown to visitors in Pakistan */
+  priceUsd: "USD 300",              /* shown to visitors outside Pakistan */
   priceNote: "16 weeks · everything included",
 
-  /* This same price is shown in the FAQ answer below too —
-     remember to change it in both places. */
+  /* The cost FAQ below uses {price}, which the website swaps for the price
+     in the visitor's currency automatically. */
 
 
   /* ----------------------------------------------------------
@@ -190,8 +192,11 @@ const CONTENT = {
     { q: "I am not in Pakistan. Can I still do this?",
       a: "Yes. Everything runs online and clients join from wherever they are." },
 
+    { q: "I live in the UK, UAE, Saudi Arabia or Canada. Can I do this?",
+      a: "Yes. Everything runs online and most clients never meet me in person. Blood tests can be done at any local lab and the results sent to me. Your food plan is built around desi food, wherever you buy it. Time zones are not a problem." },
+
     { q: "What does it cost?",
-      a: "PKR 80,000 for the full sixteen weeks, everything included. Founding group pricing, small number of places." },
+      a: "{price} for the full sixteen weeks, everything included. Founding group pricing, small number of places." },
 
     { q: "What happens after sixteen weeks?",
       a: "You get a written plan for keeping your results and running it yourself. If you want lighter ongoing support, we talk about it near the end." }
