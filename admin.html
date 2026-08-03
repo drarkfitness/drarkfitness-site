@@ -46,6 +46,20 @@ h2{font-size:20px;margin-bottom:4px}
 .card{background:var(--white);border:1px solid var(--line);border-radius:6px;padding:20px 18px;margin-bottom:14px}
 .card h3{font-size:16.5px;margin-bottom:14px}
 
+/* price preview — two side-by-side mini price cards mirroring the website */
+.pv-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.pv-wrap{grid-template-columns:1fr}}
+.pv-tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate);margin-bottom:7px}
+.pv-body{background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:4px;padding:16px 15px}
+.pv-line + .pv-line{margin-top:9px}
+.pv-price{font-family:var(--mono);font-size:23px;font-weight:500;color:var(--navy);line-height:1.15}
+.pv-per{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-top:3px}
+.pv-note{font-family:var(--mono);font-size:10.5px;letter-spacing:.03em;color:var(--slate);margin-top:10px}
+.pv-total{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:13px;padding-top:11px;font-size:14px;font-weight:600}
+.pv-total span:last-child{font-family:var(--mono);text-align:right}
+.pv-faq{font-size:12.5px;color:var(--slate);margin-top:11px;line-height:1.5}
+.pv-faq b{color:var(--navy);font-family:var(--mono);font-weight:500}
+
 label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--slate);margin:0 0 6px}
 label.big{font-family:var(--body);font-size:15px;letter-spacing:0;text-transform:none;color:var(--navy);font-weight:600}
 .hint{font-size:13px;color:var(--slate);margin:-8px 0 14px;line-height:1.5}
@@ -237,16 +251,39 @@ textarea.grow{min-height:200px;overflow:hidden}
     <div class="msg" id="setMsg"></div>
 
     <div class="card">
-      <h3>Price</h3>
-      <label>Price for clients in Pakistan (PKR)</label>
+      <h3>Pricing</h3>
+
+      <label>Pakistan price</label>
       <input id="s-price_pkr" placeholder="PKR 80,000">
-      <label>Price for clients outside Pakistan (USD)</label>
+      <label>Pakistan price note</label>
+      <input id="s-price_note" placeholder="16 weeks · everything included">
+
+      <label style="margin-top:8px">International price</label>
       <input id="s-price_usd" placeholder="USD 300">
-      <p class="hint">Visitors in Pakistan see the PKR price. Everyone else sees the USD price. This is chosen from the visitor's time zone automatically — you do not need to do anything.</p>
-      <label>Text under the price</label>
-      <input id="s-price_note">
-      <label>Places left</label>
+      <label>International price note</label>
+      <input id="s-price_usd_note" placeholder="16 weeks · everything included">
+      <label>International note line — small text shown under the price</label>
+      <input id="s-price_intl_note" placeholder="Prices shown in USD for clients outside Pakistan.">
+
+      <label style="margin-top:8px">What do visitors outside Pakistan see?</label>
+      <select id="s-price_intl_display">
+        <option value="international_only">International price only</option>
+        <option value="both">Both prices side by side</option>
+        <option value="pakistan_only">Pakistan price only</option>
+      </select>
+      <p class="hint">Visitors in Pakistan always see the Pakistan price. This chooses what everyone else sees — on the price card, in the “Your total” line, and in the cost question in your FAQ. It is picked automatically from the visitor's location; a visitor can still switch it themselves. To check it yourself, add <b>?currency=pkr</b> or <b>?currency=usd</b> to the end of your web address.</p>
+
+      <label style="margin-top:8px">Places left</label>
       <input id="s-places_left">
+    </div>
+
+    <div class="card">
+      <h3>Preview</h3>
+      <p class="hint" style="margin-top:0">Exactly how the price block looks to each visitor. Updates as you type.</p>
+      <div class="pv-wrap">
+        <div><div class="pv-tag">Visitor in Pakistan</div><div class="pv-body" id="pv-pk"></div></div>
+        <div><div class="pv-tag">Visitor outside Pakistan</div><div class="pv-body" id="pv-intl"></div></div>
+      </div>
     </div>
 
     <div class="card">
@@ -1059,7 +1096,7 @@ $('addFaq').onclick = async () => {
 };
 
 /* ---------- settings ---------- */
-const KEYS = ['price_pkr','price_usd','price_note','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
+const KEYS = ['price_pkr','price_note','price_usd','price_usd_note','price_intl_note','price_intl_display','places_left','whatsapp_number','whatsapp_display','email','instagram','tiktok','city','video_url','photo_hero','photo_about'];
 
 /* crop state for Dr. ARK's own two photos, kept in site_content keys */
 const heroCrop  = { zoom:1, x:0, y:0 };
@@ -1074,10 +1111,39 @@ function initSettingsCrops(){
   $('reset-about').onclick = () => { aboutCrop.zoom=1; aboutCrop.x=0; aboutCrop.y=0; $('crop-about')._cropApply(); };
 }
 
+/* live preview of the price block — mirrors the Pricing logic in index.html
+   so Dr. ARK sees exactly what each visitor gets without leaving the page. */
+function renderPricePreview(){
+  const v = id => { const el=$(id); return el ? el.value.trim() : ''; };
+  const pkr     = v('s-price_pkr') || 'PKR 80,000';
+  const usd     = v('s-price_usd') || 'USD 300';
+  const pkrNote = v('s-price_note');
+  const usdNote = v('s-price_usd_note') || pkrNote;
+  const intlNote= v('s-price_intl_note');
+  const mode    = (($('s-price_intl_display')||{}).value) || 'international_only';
+
+  const line  = (price,note) => '<div class="pv-line"><div class="pv-price">'+esc(price)+'</div>'+(note?'<div class="pv-per">'+esc(note)+'</div>':'')+'</div>';
+  const noteEl= t => t ? '<div class="pv-note">'+esc(t)+'</div>' : '';
+  const total = t => '<div class="pv-total"><span>Your total</span><span>'+esc(t)+'</span></div>';
+  const faq   = t => '<div class="pv-faq">FAQ cost answer: “<b>'+esc(t)+'</b> for the full sixteen weeks…”</div>';
+
+  /* Pakistan visitor — always the Pakistan price */
+  $('pv-pk').innerHTML = line(pkr,pkrNote) + total(pkr) + faq(pkr);
+
+  /* International visitor — decided by the dropdown */
+  let body, tot, fq;
+  if(mode==='pakistan_only'){ body=line(pkr,pkrNote); tot=pkr; fq=pkr; }
+  else if(mode==='both'){ body=line(pkr,pkrNote)+line(usd,usdNote)+noteEl(intlNote); tot=pkr+' · '+usd; fq=pkr+' ('+usd+' outside Pakistan)'; }
+  else { body=line(usd,usdNote)+noteEl(intlNote); tot=usd; fq=usd; }
+  $('pv-intl').innerHTML = body + total(tot) + faq(fq);
+}
+
 async function loadSettings(){
   const { data } = await sb.from('site_content').select('*');
   const map = {}; (data||[]).forEach(r => map[r.key]=r.value);
   KEYS.forEach(k => { const el=$('s-'+k); if(el) el.value = map[k]||''; });
+  if(!map.price_intl_display && $('s-price_intl_display')) $('s-price_intl_display').value = 'international_only';
+  renderPricePreview();
   const vmax = $('welcome-video-max'); if(vmax) vmax.textContent = VIDEO_MAX_LABEL;
   renderWelcomeVideoPreview(map.video_url);
   $('th-hero').src  = map.photo_hero  || '';
@@ -1188,6 +1254,12 @@ $('remove-welcome-video').onclick = async () => {
 
 /* keep the preview in step when the link is typed or pasted */
 $('s-video_url').addEventListener('input', () => renderWelcomeVideoPreview($('s-video_url').value));
+
+/* keep the price preview in step as the pricing fields change */
+['s-price_pkr','s-price_note','s-price_usd','s-price_usd_note','s-price_intl_note'].forEach(id => {
+  const el=$(id); if(el) el.addEventListener('input', renderPricePreview);
+});
+if($('s-price_intl_display')) $('s-price_intl_display').addEventListener('change', renderPricePreview);
 
 $('saveSet').onclick = async () => {
   const now = new Date().toISOString();

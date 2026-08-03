@@ -23,7 +23,10 @@ const CONTENT = {
   price: "PKR 80,000",              /* fallback only — kept for older content */
   pricePkr: "PKR 80,000",           /* shown to visitors in Pakistan */
   priceUsd: "USD 300",              /* shown to visitors outside Pakistan */
-  priceNote: "16 weeks · everything included",
+  priceNote: "16 weeks · everything included",       /* under the Pakistan price */
+  priceUsdNote: "16 weeks · everything included",    /* under the international price */
+  priceIntlNote: "Prices shown in USD for clients outside Pakistan.",  /* small line under the price */
+  priceIntlDisplay: "international_only",             /* international_only | both | pakistan_only */
 
   /* The cost FAQ below uses {price}, which the website swaps for the price
      in the visitor's currency automatically. */
