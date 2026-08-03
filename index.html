@@ -413,6 +413,12 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
 @media (min-width:700px){.brand-main{font-size:25px}.brand-sub{font-size:10.5px}}
 
 .cta-note{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);margin-top:14px}
+/* hero proof — one real client result, pulled from the results table.
+   Green is used only for a genuine positive change (design rule). Hidden
+   until real numbers exist, so the page never shows an empty claim. */
+.hero-proof{display:none;font-family:var(--mono);font-size:13.5px;line-height:1.5;color:#1E5A3E;margin-top:18px;padding:12px 14px;background:rgba(46,125,91,.07);border:1px solid rgba(46,125,91,.28);border-left:2px solid #2E7D5B;border-radius:4px}
+.hero-proof.show{display:block}
+.hero-proof b{font-weight:500;letter-spacing:.08em;text-transform:uppercase;font-size:11px;color:#256B4C}
 .hero-media{display:flex;flex-direction:column;gap:16px}
 
 /* what you get */
@@ -661,6 +667,7 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         </ul>
         <a href="#start" class="btn">Get Started</a>
         <a href="#program" class="btn btn-ghost">See how it works</a>
+        <p class="hero-proof" id="c-hero-proof"></p>
         <p class="cta-note">Takes 60 seconds. We reply on WhatsApp.</p>
         <p class="cta-note">My commitment: follow the plan and hit your check-ins, or I keep coaching you free until your markers move.</p>
       </div>
@@ -726,8 +733,22 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <li><strong>A plan built around your medicines.</strong> <span>Metformin, thyroid tablets, blood pressure medicine, Ozempic — each one changes how your body handles food and training. Your plan is built with that in it, not despite it.</span></li>
       <li><strong>Daily monitoring.</strong> <span>Logged in under two minutes a day. When progress stalls, it gets fixed the same day it happens — you never lose weeks waiting for a Sunday check-in.</span></li>
       <li><strong>Real answers when nothing is moving.</strong> <span>If you are doing the work and the scale will not shift, we look at what is going on underneath — instead of telling you to try harder.</span></li>
+      <li><strong>We fix the reason, so the results stay.</strong> <span>Most programs start and end with the scale, so the weight comes back — nothing underneath it changed. When your health, energy and habits improve, the fat loss follows, and it holds because the real cause was dealt with.</span></li>
+      <li><strong>Habits that outlast any diet trend.</strong> <span>Keto, fasting, detox teas — people lose weight and put it straight back, because nobody can live like that forever. The boring work nobody sells — mindset, habits, handling a bad weekend — is what decides whether you are still holding your results in two years.</span></li>
     </ul>
     <p class="callout">This is not a diet chart with a doctor's name on it. It is complete metabolic care, built around your real life.</p>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section class="sec" id="results">
+  <div class="wrap">
+    <div class="narrow rev" style="margin-bottom:26px">
+      <span class="label">Client results</span>
+      <h2>What real change looks like.</h2>
+    </div>
+
+    <div id="c-results"></div>
   </div>
 </section>
 
@@ -756,49 +777,6 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
         </button>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ROOT CAUSE -->
-<section class="sec sec-white">
-  <div class="wrap narrow rev">
-    <span class="label">How this is different</span>
-    <h2>We go after the reason, not just the weight.</h2>
-    <p>Most programs start and end with the scale. Eat less, move more, weigh yourself on Sunday.</p>
-    <p>That is why the weight comes back. Nothing underneath it changed.</p>
-    <p><strong>Here the goal is your health, your energy and your habits.</strong> When those improve, fat loss and a better shape follow — and they stay, because the real cause was dealt with.</p>
-    <p class="muted" style="margin-bottom:8px">So before your plan is written, we look at:</p>
-    <ul class="inputs">
-      <li>Your health history</li>
-      <li>Any medicines you take</li>
-      <li>How well you sleep</li>
-      <li>Your work and stress levels</li>
-      <li>Diabetes or heart disease in the family</li>
-      <li>Where the weight sits on your body</li>
-      <li>Blood tests, if you need them</li>
-      <li>What you eat now, honestly</li>
-      <li>Your relationship with food</li>
-      <li>What training you have done before</li>
-    </ul>
-    <p class="callout">A plan built after all of that looks nothing like a plan built from your weight alone.</p>
-  </div>
-</section>
-
-<!-- BEHAVIOUR -->
-<section class="sec">
-  <div class="wrap narrow rev">
-    <span class="label">What actually works</span>
-    <h2>Diet trends come and go. Behaviour is the thing that lasts.</h2>
-    <p>Keto. Intermittent fasting. Detox teas. Every year there is a new one, and every year people lose weight on it and put it back.</p>
-    <p>None of them failed because the science was wrong. They failed because nobody can live like that forever.</p>
-    <p>So a real part of this program is the boring, unglamorous work that nobody sells:</p>
-    <ul class="forlist">
-      <li><strong>Mindset</strong> — why you eat when you are not hungry, and what to do about it</li>
-      <li><strong>Goal setting</strong> — proper targets, broken into steps you can actually hit</li>
-      <li><strong>Habit building</strong> — one change at a time, until it stops taking effort</li>
-      <li><strong>Handling setbacks</strong> — because one bad weekend should not end the whole thing</li>
-    </ul>
-    <p class="callout">This is the part that decides whether you are still holding your results in two years.</p>
   </div>
 </section>
 
@@ -975,18 +953,6 @@ footer{background:var(--navy);color:rgba(255,253,248,0.88);padding:52px 0 36px;f
       <div class="step"><div class="step-num">08</div><h3>One live call every month</h3><p>Four calls to go through progress properly and sort out anything that needs a conversation.</p></div>
       <div class="step"><div class="step-num">09</div><h3>Handover</h3><p>Repeat tests, a final review, and a written plan for keeping what you have built.</p></div>
     </div>
-  </div>
-</section>
-
-<!-- RESULTS -->
-<section class="sec sec-white" id="results">
-  <div class="wrap">
-    <div class="narrow rev" style="margin-bottom:26px">
-      <span class="label">Client results</span>
-      <h2>What real change looks like.</h2>
-    </div>
-
-    <div id="c-results"></div>
   </div>
 </section>
 
@@ -1334,10 +1300,35 @@ function fmtAge(a){
 }
 function resultMeta(cl){ return [cl.name, fmtAge(cl.age), cl.occupation, cl.duration].filter(Boolean).map(_txt).join(' · '); }
 
+/* hero proof — one real client result under the hero buttons. Pulled from
+   the same client list, so it updates when better results are added. Shows
+   the first client that has real start AND end weight; nothing if none do. */
+function renderHeroProof(clients){
+  const el = document.getElementById('c-hero-proof');
+  if(!el) return;
+  const list = (clients||[]).filter(Boolean);
+  let pick = null;
+  for(let k=0;k<list.length;k++){
+    const cl = list[k];
+    const a = parseFloat(String(cl.weightStart==null?'':cl.weightStart).replace(/[^0-9.\-]/g,''));
+    const b = parseFloat(String(cl.weightEnd==null?'':cl.weightEnd).replace(/[^0-9.\-]/g,''));
+    if(isFinite(a) && isFinite(b) && a !== b){ pick = cl; break; }
+  }
+  if(!pick){ el.className = 'hero-proof'; el.innerHTML = ''; return; }
+  const unit = _txt(pick.weightUnit || 'kg');
+  const dur  = String(pick.duration==null?'':pick.duration).trim();
+  let txt = 'Recent client: ' + _txt(String(pick.weightStart).trim()) + ' ' + unit +
+            ' to ' + _txt(String(pick.weightEnd).trim()) + ' ' + unit;
+  if(dur) txt += ' in ' + _txt(dur);
+  el.innerHTML = '<b>Real result</b> &nbsp; ' + txt;
+  el.className = 'hero-proof show';
+}
+
 function renderResults(clients){
   const box = document.getElementById('c-results');
-  if(!box) return;
   const list = (clients||[]).filter(Boolean);
+  renderHeroProof(list);
+  if(!box) return;
   if(!list.length) return;
   window._clients = list;
 
@@ -1364,9 +1355,16 @@ function renderResults(clients){
       '</button>';
     const actions =
       (hasStory ? '<button class="story-more" type="button" onclick="openStory('+idx+')">Read full story</button>' : '');
+    /* only show the before/after frames when at least one real photo exists.
+       No photos -> no empty "No photo" frames, just the words and numbers. */
+    const hasBefore = _isUrl((cl.photoBefore||'').trim());
+    const hasAfter  = _isUrl((cl.photoAfter||'').trim());
+    const baBlock = (hasBefore || hasAfter)
+      ? '<div class="ba">' + resultHalf(cl.photoBefore, cl.cropBefore, 'Before', '') + resultHalf(cl.photoAfter, cl.cropAfter, 'After', 'ba-after') + '</div>'
+      : '';
     return '<div class="car-slide">' +
       videoBlock +
-      '<div class="ba">' + resultHalf(cl.photoBefore, cl.cropBefore, 'Before', '') + resultHalf(cl.photoAfter, cl.cropAfter, 'After', 'ba-after') + '</div>' +
+      baBlock +
       '<div class="car-body">' +
         (headline ? '<p class="result-headline">'+_txt(headline)+'</p>' : '') +
         '<div class="story-meta">'+resultMeta(cl)+'</div>' +

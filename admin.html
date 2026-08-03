@@ -87,7 +87,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--gold);outline-of
 .crop:active{cursor:grabbing}
 .crop img,.crop video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;transform-origin:center center;pointer-events:none;-webkit-user-drag:none}
 .crop .crop-hint{position:absolute;left:8px;bottom:8px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(13,27,62,.72);padding:4px 7px;border-radius:3px;pointer-events:none}
-.crop-tools{display:flex;gap:8px;margin-bottom:8px}
+.crop-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 .msg{padding:11px 14px;border-radius:5px;font-size:14.5px;margin-bottom:14px;display:none}
 .msg.ok{background:rgba(46,125,91,.12);color:var(--green);display:block}
 .msg.err{background:rgba(179,38,30,.1);color:var(--red);display:block}
@@ -286,7 +286,14 @@ textarea.grow{min-height:200px;overflow:hidden}
       </div>
       <p class="hint">Recommended size: 1000 × 1250 pixels (taller than it is wide). This frame is the exact shape the website uses.</p>
 
-      <label style="margin-top:6px">Welcome video link (YouTube)</label>
+      <label class="big" style="margin-top:6px">Your welcome video</label>
+      <p class="hint">Upload a video file (kept at full original quality — no compression) or paste a YouTube/Vimeo link. Maximum file size: <b id="welcome-video-max">50 MB</b> (your Supabase plan's limit).</p>
+      <div id="welcome-video-preview"></div>
+      <div class="crop-tools">
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Upload / replace video<input type="file" accept="video/*" id="up-welcome-video" style="display:none"></label>
+        <button type="button" class="btn danger" id="remove-welcome-video" style="display:none">Remove video</button>
+      </div>
+      <label style="margin-top:6px">Or paste a video link (YouTube, Vimeo)</label>
       <input id="s-video_url" placeholder="https://www.youtube.com/embed/...">
     </div>
 
@@ -459,6 +466,33 @@ async function uploadImage(file){
   return data.publicUrl;
 }
 
+/* ---------- video upload ----------
+   Videos are stored at full original quality — nothing here compresses or
+   downscales them. The only limit is your Supabase plan's maximum file size.
+   The free plan caps this at 50 MB; going higher needs a paid plan. */
+const VIDEO_MAX_BYTES = 52428800;          // 50 MB — the free-plan maximum
+const VIDEO_MAX_LABEL = '50 MB';
+const fmtSize = b => b >= 1048576 ? (b/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b/1024)) + ' KB';
+
+/* '' if the file is fine, otherwise a clear message with the real size + max */
+function videoSizeError(file){
+  if(file && file.size > VIDEO_MAX_BYTES){
+    return 'That video is ' + fmtSize(file.size) + '. The most you can upload is ' + VIDEO_MAX_LABEL + '. Please choose a smaller file.';
+  }
+  return '';
+}
+
+async function uploadVideo(file){
+  const name = Date.now() + '-' + file.name.replace(/[^a-zA-Z0-9.]/g,'-').toLowerCase();
+  /* keep the original file exactly — full resolution, real content type */
+  const { error } = await sb.storage.from('images').upload(name, file, {
+    upsert:true, contentType:file.type || undefined, cacheControl:'3600'
+  });
+  if(error) throw error;
+  const { data } = sb.storage.from('images').getPublicUrl(name);
+  return data.publicUrl;
+}
+
 /* ============================================================
    PHOTO CROP — shared maths with index.html.
    A photo is shown object-fit:cover (centred) inside a fixed-ratio
@@ -612,6 +646,10 @@ function videoField(r){
   const z = r.video_zoom!=null ? r.video_zoom : 1;
   const x = r.video_x!=null ? r.video_x : 0;
   const y = r.video_y!=null ? r.video_y : 0;
+  /* a Remove button shows whenever any video (file or link) is set */
+  const removeBtn = url
+    ? `<button type="button" class="btn danger" onclick="removeResultVideo('${id}')">Remove video</button>`
+    : '';
   const media = (url && isDirectVideo(url))
     ? `<div class="crop" data-id="${id}" data-which="video" style="aspect-ratio:16/9">
         <video src="${esc(url)}#t=0.1" muted playsinline preload="metadata" draggable="false"></video>
@@ -619,11 +657,13 @@ function videoField(r){
       </div>
       <div class="crop-tools">
         <button type="button" class="btn ghost sm" data-resetcrop="video" data-id="${id}">Reset crop</button>
-        <label class="btn ghost sm" style="margin:0;cursor:pointer">Change video<input type="file" accept="video/*" data-video="1" data-id="${id}" style="display:none"></label>
+        <label class="btn ghost sm" style="margin:0;cursor:pointer">Replace video<input type="file" accept="video/*" data-video="1" data-id="${id}" style="display:none"></label>
+        ${removeBtn}
       </div>`
     : `<div class="thumb thumb-empty" style="aspect-ratio:16/9">${url ? 'Link video — not cropped' : 'No video yet'}</div>
       <div class="crop-tools">
         <label class="btn ghost sm" style="margin:0;cursor:pointer">Upload a video file<input type="file" accept="video/*" data-video="1" data-id="${id}" style="display:none"></label>
+        ${removeBtn}
       </div>`;
   return `${media}
     <label style="margin-top:6px">Or paste a video link (YouTube, Vimeo)</label>
@@ -631,7 +671,7 @@ function videoField(r){
     <input type="hidden" data-f="video_zoom" data-id="${id}" value="${Number(z)}">
     <input type="hidden" data-f="video_x" data-id="${id}" value="${Number(x)}">
     <input type="hidden" data-f="video_y" data-id="${id}" value="${Number(y)}">
-    <p class="hint">Upload a video file to crop its thumbnail here — the frame is the exact shape the website uses. Or paste a YouTube/Vimeo link (links are not cropped). Leave empty for no video.</p>`;
+    <p class="hint">Upload a video file (kept at full original quality — no compression). Maximum size ${VIDEO_MAX_LABEL}. The frame is the exact shape the website uses — drag and zoom to crop the thumbnail. Or paste a YouTube/Vimeo link (links are not cropped). Use Remove to clear it.</p>`;
 }
 
 /* wire every client crop frame to its hidden zoom/x/y inputs */
@@ -854,9 +894,11 @@ async function loadResults(){
   document.querySelectorAll('[data-video]').forEach(inp => {
     inp.onchange = async e => {
       const f = e.target.files[0]; if(!f) return;
+      const tooBig = videoSizeError(f);
+      if(tooBig){ flash($('resMsg'), tooBig, false); e.target.value=''; return; }
       flash($('resMsg'),'Uploading video...');
       try{
-        const url = await uploadImage(f);   // same 'images' storage bucket as photos
+        const url = await uploadVideo(f);   // full quality, same 'images' bucket as photos
         _openId = e.target.dataset.id;
         /* new video -> reset the thumbnail crop to centre so it can be set fresh */
         await sb.from('client_results')
@@ -864,6 +906,7 @@ async function loadResults(){
           .eq('id', e.target.dataset.id);
         flash($('resMsg'),'Video uploaded. Drag and zoom to set the thumbnail, then press Save.'); loadResults();
       }catch(err){ flash($('resMsg'), err.message, false); }
+      e.target.value='';
     };
   });
 
@@ -914,6 +957,18 @@ window.delResult = async id => {
   if(!confirm('Delete this client result? This cannot be undone.')) return;
   if(_openId === id) _openId = null;
   await sb.from('client_results').delete().eq('id', id);
+  loadResults();
+};
+
+/* remove just this client's video (file or link) and clear its thumbnail crop */
+window.removeResultVideo = async id => {
+  if(!confirm('Remove this client\'s video? Their photos and story stay.')) return;
+  _openId = id;   /* keep this card open through the reload */
+  const { error } = await sb.from('client_results')
+    .update({ video_url:'', video_zoom:1, video_x:0, video_y:0 })
+    .eq('id', id);
+  if(error){ flash($('resMsg'), error.message, false); return; }
+  flash($('resMsg'),'Video removed.');
   loadResults();
 };
 
@@ -982,6 +1037,8 @@ async function loadSettings(){
   const { data } = await sb.from('site_content').select('*');
   const map = {}; (data||[]).forEach(r => map[r.key]=r.value);
   KEYS.forEach(k => { const el=$('s-'+k); if(el) el.value = map[k]||''; });
+  const vmax = $('welcome-video-max'); if(vmax) vmax.textContent = VIDEO_MAX_LABEL;
+  renderWelcomeVideoPreview(map.video_url);
   $('th-hero').src  = map.photo_hero  || '';
   $('th-about').src = map.photo_about || '';
   heroCrop.zoom  = parseFloat(map.photo_hero_zoom)  || 1;
@@ -1018,6 +1075,48 @@ async function loadSettings(){
     }catch(err){ flash($('setMsg'), err.message, false); }
   };
 });
+
+/* ---------- welcome video (upload / preview / replace / remove) ---------- */
+/* small preview of what is currently live: an uploaded file plays here with
+   controls; a pasted link shows as a clickable link. */
+function renderWelcomeVideoPreview(url){
+  url = (url||'').trim();
+  const box = $('welcome-video-preview'), rm = $('remove-welcome-video');
+  if(!box) return;
+  if(!url){ box.innerHTML = ''; if(rm) rm.style.display='none'; return; }
+  if(rm) rm.style.display='';
+  box.innerHTML = isDirectVideo(url)
+    ? '<video src="'+esc(url)+'" controls preload="metadata" playsinline style="width:100%;max-width:340px;aspect-ratio:16/9;background:#000;border:1px solid var(--line);border-radius:5px;margin-bottom:8px"></video>'
+    : '<div class="thumb thumb-empty" style="aspect-ratio:16/9;max-width:340px;margin-bottom:6px">Link video</div>'
+      + '<p class="hint" style="margin-top:0"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(url)+'</a> — opens on your website.</p>';
+}
+
+$('up-welcome-video').onchange = async e => {
+  const f = e.target.files[0]; if(!f) return;
+  const tooBig = videoSizeError(f);
+  if(tooBig){ flash($('setMsg'), tooBig, false); e.target.value=''; return; }
+  flash($('setMsg'),'Uploading video...');
+  try{
+    const url = await uploadVideo(f);
+    await sb.from('site_content').upsert([{ key:'video_url', value:url, updated_at:new Date().toISOString() }]);
+    $('s-video_url').value = url;
+    renderWelcomeVideoPreview(url);
+    flash($('setMsg'),'Video uploaded and saved. It is now live on your website.');
+  }catch(err){ flash($('setMsg'), err.message, false); }
+  e.target.value='';
+};
+
+$('remove-welcome-video').onclick = async () => {
+  if(!confirm('Remove your welcome video? The video button on your website goes back to the placeholder.')) return;
+  const { error } = await sb.from('site_content').upsert([{ key:'video_url', value:'', updated_at:new Date().toISOString() }]);
+  if(error){ flash($('setMsg'), error.message, false); return; }
+  $('s-video_url').value = '';
+  renderWelcomeVideoPreview('');
+  flash($('setMsg'),'Welcome video removed.');
+};
+
+/* keep the preview in step when the link is typed or pasted */
+$('s-video_url').addEventListener('input', () => renderWelcomeVideoPreview($('s-video_url').value));
 
 $('saveSet').onclick = async () => {
   const now = new Date().toISOString();
